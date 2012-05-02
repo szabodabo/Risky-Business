@@ -21,6 +21,11 @@ int main( int argc, char **argv ) {
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 	MPI_Comm_size( MPI_COMM_WORLD, &commSize );
 
+	printf("MPI Rank %d initalized\n", myRank);
+	if (myRank == 0) {
+		printf("Commsize is %d\n", commSize);
+	}
+
 	tt_per_rank = NUM_TERRITORIES / commSize;
 	troopCounts = calloc( NUM_TERRITORIES, sizeof(int) );
 
@@ -39,11 +44,15 @@ int main( int argc, char **argv ) {
 	//Once we get here, allreduce has so nicely populated total_tt for everyone
 	read_from_file( adjMatrix, troopCounts, myRank, commSize );
 
-
-
-	printf("MPI Rank %d initalized\n", myRank);
+	
 	if (myRank == 0) {
-		printf("Commsize is %d\n", commSize);
+		printf("==============================================\n");
+		printf("Current Total Troop Counts:\n");
+		printf("==============================================\n");
+		printf("TERRITORY | NUM_TROOPS\n");
+		for (i = 0; i < total_tt; i++) {
+			printf("%9d | %10d\n", t, troopCounts[i]);
+		}
 	}
 
 	MPI_Finalize();
