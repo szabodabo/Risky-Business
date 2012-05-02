@@ -13,11 +13,9 @@ void read_header_info( int *total_tt )
 {
 	int fd = open(INPUT_BINARY, O_RDONLY);
 	read(fd, total_tt, HEADER_BYTES);
-	//DEBUG
-	printf("HEADER: %d\n", *total_tt);
 }
 
-int read_from_file( int total_tt, int **adjMtx, int *troopCounts, int rank, int num_ranks ) {
+int read_from_file( int total_tt, int **adjMtx, int *troopCounts, int* teamIDs, int rank, int num_ranks ) {
 	
 	struct stat* stats = malloc(sizeof(struct stat));
 	int success = stat(INPUT_BINARY, stats);
@@ -52,11 +50,10 @@ int read_from_file( int total_tt, int **adjMtx, int *troopCounts, int rank, int 
 		//to store the number of troops sitting on that territory. This pulls out that value
 		//and sets the adjacency matrix to zero
 		int index = rank * tt_per_rank + tt_a;
-		troopCounts[tt_a] = adjMtx[tt_a][index];
-		printf("%d : %d\n", rank, index);
+		troopCounts[index] = adjMtx[tt_a][index];
+		teamIDs[index] = index;
 		adjMtx[tt_a][index] = 0;
 	}
-	printf("HERE\n");
 	free(stats);
 
 	return rank * tt_per_rank;
