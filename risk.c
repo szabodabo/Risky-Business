@@ -69,6 +69,7 @@ int main( int argc, char **argv ) {
 	int **adjMatrix; //Adjacency matrix
 	int **edgeActivity; //Edge data (passed around)
 	int tt_per_rank; //Number of territories per MPI Rank
+	int data_offset; //Offset for our territories
 
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
@@ -101,7 +102,7 @@ int main( int argc, char **argv ) {
 	}
 
 	//Once we get here, allreduce has so nicely populated total_tt for everyone
-	read_from_file( total_tt, adjMatrix, troopCounts, myRank, commSize );
+	data_offset = read_from_file( total_tt, adjMatrix, troopCounts, myRank, commSize );
 
 	printf("MPI Rank %d initalized\n", myRank);
 	if (myRank == 0) {
@@ -112,7 +113,7 @@ int main( int argc, char **argv ) {
 	//DEBUG
 	int j;
 	for(i = 0; i < tt_per_rank; i++) {
-		printf("TT %d : ", myRank);
+		printf("TT %d : ", i+data_offset);
 		for(j = 0; j < total_tt; j++) {
 			printf("%d ", adjMatrix[i][j]);
 		}
