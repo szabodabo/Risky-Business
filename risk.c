@@ -74,6 +74,11 @@ int main( int argc, char **argv ) {
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 	MPI_Comm_size( MPI_COMM_WORLD, &commSize );
 
+	printf("MPI Rank %d initalized\n", myRank);
+	if (myRank == 0) {
+		printf("Commsize is %d\n", commSize);
+	}
+
 	//Rank 0 reads header information and sends to everybody else
 	if (myRank == 0) {
 		read_header_info( &total_tt );
@@ -90,6 +95,14 @@ int main( int argc, char **argv ) {
 	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
 
+	if (myRank == 0) {
+		printf("==============================================\n");
+		printf("Current Total Troop Counts:\n");
+		printf("==============================================\n");
+		printf("TERRITORY | NUM_TROOPS\n");
+		for (i = 0; i < total_tt; i++) {
+			printf("%9d | %10d\n", i, troopCounts[i]);
+		}
 	for (i = 0; i < tt_per_rank; i++) {
 		edgeActivity[i] = calloc( total_tt, sizeof(int) );
 		adjMatrix[i] = calloc( total_tt, sizeof(int) );
