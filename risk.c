@@ -90,19 +90,11 @@ int main( int argc, char **argv ) {
 	
 	//Now use the known total territory count to init other variables
 	tt_per_rank = total_tt / commSize;
-	troopCounts = calloc( total_tt, sizeof(int) );
+	troopCounts = calloc( tt_per_rank, sizeof(int) );
 
 	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
 
-	if (myRank == 0) {
-		printf("==============================================\n");
-		printf("Current Total Troop Counts:\n");
-		printf("==============================================\n");
-		printf("TERRITORY | NUM_TROOPS\n");
-		for (i = 0; i < total_tt; i++) {
-			printf("%9d | %10d\n", i, troopCounts[i]);
-		}
 	for (i = 0; i < tt_per_rank; i++) {
 		edgeActivity[i] = calloc( total_tt, sizeof(int) );
 		adjMatrix[i] = calloc( total_tt, sizeof(int) );
@@ -119,13 +111,24 @@ int main( int argc, char **argv ) {
 	sleep(myRank + 1);
 	//DEBUG
 	int j;
-	for(i = 0; i < tt_per_rank; i++)
-	{
+	for(i = 0; i < tt_per_rank; i++) {
 		printf("TT %d : ", myRank);
-		for(j = 0; j < total_tt; j++)
+		for(j = 0; j < total_tt; j++) {
 			printf("%d ", adjMatrix[i][j]);
-	       printf("\n");
+		}
+		printf("\n");
 	}	       
+
+	if (myRank == 0) {
+		printf("==============================================\n");
+		printf("Current Total Troop Counts:\n");
+		printf("==============================================\n");
+		printf("TERRITORY | NUM_TROOPS\n");
+		for (i = 0; i < total_tt; i++) {
+			printf("%9d | %10d\n", i, troopCounts[i]);
+		}
+	}
+
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
