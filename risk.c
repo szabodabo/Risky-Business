@@ -4,11 +4,16 @@
 
 #define NUM_TERRITORIES 40
 
+void read_from_file( char **adjMtx, int *troopCounts, int rank, int num_ranks );
+void read_header_info( int *totalNumTerr );
+
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i;
 
+	int total_tt = 0; //Total number of territories being warred
 	int *troopCounts; //Number of troops each territory has
+	char **adjMatrix; //Adjacency matrix
 	int **edgeActivity; //Edge data (passed around)
 	int tt_per_rank; //Number of territories per MPI Rank
 
@@ -23,6 +28,16 @@ int main( int argc, char **argv ) {
 	for (i = 0; i < tt_per_rank; i++) {
 		edgeActivity[i] = calloc( NUM_TERRITORIES, sizeof(int) );
 	}
+
+	//Rank 0 reads header information and sends to everybody else
+	if (myRank == 0) {
+		read_header_info( &total_tt );
+	}
+
+	MPI_Allreduce( &total_tt, &total_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+
+	//Once we get here, allreduce has so nicely populated total_tt for everyone
+	read_from_file( adjMatrix, troopCounts, myRank, commSize );
 
 
 
