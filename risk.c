@@ -122,14 +122,17 @@ int main( int argc, char **argv ) {
 		printf("\n");
 	}	       
 
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	if (myRank == 0) {
 		printf("==============================================\n");
 		printf("Current Total Troop Counts:\n");
 		printf("==============================================\n");
 		printf("TERRITORY | NUM_TROOPS\n");
-		for (i = 0; i < total_tt; i++) {
-			printf("%9d | %10d\n", i, troopCounts[i]);
-		}
+	}
+	sleep(myRank + 1);
+	for (i = 0; i < tt_per_rank; i++) {
+		printf("%9d | %10d\n", i+data_offset, troopCounts[i]);
 	}
 
 
