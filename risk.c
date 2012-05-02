@@ -43,17 +43,20 @@ void read_from_file( int total_tt, int **adjMtx, int *troopCounts, int rank, int
 	MPI_File_close(&mfile);
 
 	int tt_a, tt_b;
-	for(tt_a = 0; tt_a < tt_per_rank; tt_a++)
-	{
-		for(tt_b = 0; tt_b < total_tt; tt_b++)
+	for(tt_a = 0; tt_a < tt_per_rank; tt_a++) {
+
+		for(tt_b = 0; tt_b < total_tt; tt_b++) {
 			adjMtx[tt_a][tt_b] = buffer[tt_a * total_tt + tt_b];
+		}
 		//Since no territory has an edge to itself, we used that spot in the binary file
 		//to store the number of troops sitting on that territory. This pulls out that value
 		//and sets the adjacency matrix to zero
-		troopCounts[tt_a] = adjMtx[tt_a][tt_a];
-		//adjMtx[tt_a][tt_a] = 0;
+		int index = rank * tt_per_rank + tt_a;
+		troopCounts[index] = adjMtx[tt_a][index];
+		printf("%d : %d\n", rank, index);
+		adjMtx[tt_a][index] = 0;
 	}
-
+	printf("HERE\n");
 	free(stats);
 }
 
