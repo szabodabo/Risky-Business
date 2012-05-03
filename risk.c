@@ -21,13 +21,17 @@ void apply_strategy(int teamID, int tt_total, int* troopCounts, int* teamIDs, in
 	int i;
 	for( i = 0; i < tt_total; i++ ) {
 		//don't need to attack my own team
-		neighborCount += adjMatrix[i] && teamIDs[i] != teamID;
+		neighborCount += ( adjMatrix[i] ) && ( teamIDs[i] != teamID );
 	}
 	
-	int remainder = myTroops % neighborCount;
-	int troopsPerNeighbor = (myTroops - remainder) / neighborCount;
+	//int remainder = myTroops % neighborCount;
+	//int troopsPerNeighbor = (myTroops - remainder) / neighborCount;
+	//Can't we use integer division here?
+	int troopsPerNeighbor = myTroops / neighborCount;
 	for( i = 0; i < tt_total; i++ ) {
-
+		if( adjMatrix[i] == 1 && teamIDs[i] != teamID ) {
+			
+		}
 	}	
 }
 
@@ -119,6 +123,7 @@ int main( int argc, char **argv ) {
 	//MAIN LOOP (set up for one iteration for now)
 	
 	for( i = 0; i < tt_per_rank; i++ ) {
+		//Apply a battle strategy for each node this Rank is responsible for
 		apply_strategy( teamIDs[tt_start + i], tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 	}
 
