@@ -4,6 +4,33 @@
 
 #include "risk_input.h"
 
+//GIANT IDEA:
+//Rule change --> it is totally legal to not leave any troops in your home node. If all troops from a node
+//get killed while away and nobody is left home, that's fine. That node just has 0 troops to allocate during
+//every phase and it will get conquered pretty damn fast (battle resolution should report no troops lost if a team
+//fights an army with 0 troops)
+
+//Apply the strategy for team <teamID> by looking at the troop counts and controlling teams for 
+//each node on the map. Use the adjacency matrix to figure out our neighbors.  Place results in edgeActivity
+void apply_strategy(int teamID, int tt_total, int* troopCounts, int* teamIDs, int* adjMatrix, int* edgeActivity)
+{
+	//simple strategy to test and debug with - split troops evenly on all edges, all attacking
+	//if there is a remainder of troops, don't do anything with them
+	int myTroops = troopCounts[teamID];
+	int neighborCount = 0;
+	int i;
+	for( i = 0; i < tt_total; i++ ) {
+		//don't need to attack my own team
+		neighborCount += adjMatrix[i] && teamIDs[i] != teamID;
+	}
+	
+	int remainder = myTroops % neighborCount;
+	int troopsPerNeighbor = (myTroops - remainder) / neighborCount;
+	for( i = 0; i < tt_total; i++ ) {
+
+	}	
+}
+
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i;
@@ -19,7 +46,7 @@ int main( int argc, char **argv ) {
 	int **edgeActivity; //Edge data (passed around)
 
 	int tt_per_rank; //Number of territories per MPI Rank
-	int data_offset; //Offset for our territories
+	int tt_start; //Which territory do we start with? (which is the first territory in our set)
 
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
@@ -34,6 +61,7 @@ int main( int argc, char **argv ) {
 		read_header_info( &total_tt );
 	}
 
+	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
 	MPI_Allreduce( &total_tt, &temp_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	total_tt = temp_tt;
@@ -52,13 +80,13 @@ int main( int argc, char **argv ) {
 		adjMatrix[i] = calloc( total_tt, sizeof(int) );
 	}
 
-	//Once we get here, allreduce has so nicely populated total_tt for everyone
-	
+	//Temp variables to enable all-reduce (might use these later when communicating further results)	
 	int* troopCounts_temp = calloc( total_tt, sizeof(int) );
 	int* teamIDs_temp = calloc( total_tt, sizeof(int) );
 	
-	data_offset = read_from_file( total_tt, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
+	tt_start = read_from_file( total_tt, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
 
+	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, total_tt, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, total_tt, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
@@ -72,7 +100,7 @@ int main( int argc, char **argv ) {
 		printf("==============================================\n");
 		printf("TERRITORY | NUM_TROOPS\n");
 		for (i = 0; i < total_tt; i++) {
-			printf("%9d | %10d\n", i+data_offset, troopCounts[i]);
+			printf("%9d | %10d\n", i+tt_start, troopCounts[i]);
 		}
 	}
 
@@ -81,12 +109,18 @@ int main( int argc, char **argv ) {
 	//DEBUG
 	int j;
 	for(i = 0; i < tt_per_rank; i++) {
-		printf("TT %d : ", i+data_offset);
+		printf("TT %d : ", i+tt_start);
 		for(j = 0; j < total_tt; j++) {
 			printf("%d ", adjMatrix[i][j]);
 		}
 		printf("\n");
-	}	       
+	}
+
+	//MAIN LOOP (set up for one iteration for now)
+	
+	for( i = 0; i < tt_per_rank; i++ ) {
+		apply_strategy( teamIDs[tt_start + i], tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
+	}
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
