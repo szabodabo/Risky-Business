@@ -118,9 +118,6 @@ int main( int argc, char **argv ) {
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
-
-	free(troopCounts_temp);
-	free(teamIDs_temp);
 	
 	if (myRank == 0) {
 		printf("tt_total is %d\n", tt_total);
@@ -188,10 +185,38 @@ int main( int argc, char **argv ) {
 	MPI_Barrier( MPI_COMM_WORLD );
 
 	//Do math for each battle to find the winner and how many troops the winner has left
+	//Everyone calculates everything
+	//Each edge calc done twice... take one of them
 
 	//If one node is devastated, its conquerors this turn should fight over it
 
-	//Teams and troop counts should be updated
+	//==================Teams and troop counts should be updated==============================
+
+	//Temp variables to enable all-reduce (using these to communicate further results)	
+	bzero( troopCounts_temp, tt_total * sizeof(int) );
+	bzero( teamIDs_temp, tt_total * sizeof(int) );
+
+	for ( i = 0; i < tt_total; i++ ) {
+		//Set troopcount
+		//Set teamids
+	}
+	
+	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
+	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+	
+	if (myRank == 0) {
+		printf("tt_total is %d\n", tt_total);
+		printf("==============================================\n");
+		printf("Current Total Troop Counts:\n");
+		printf("==============================================\n");
+		printf("TERRITORY | NUM_TROOPS\n");
+		for (i = 0; i < tt_total; i++) {
+			printf("%9d | %10d\n", i+tt_offset, troopCounts[i]);
+		}
+	}
+
+	//===============================================================================================
 
 	//Rinse and repeat
 
