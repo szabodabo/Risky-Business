@@ -1,10 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "mpi.h"
 
 #define ASSIGN_ATTACK(E, NUM) (E = NUM)
 #define ASSIGN_DEFENSE(E, NUM) (E = (-1) * NUM)
 #define I_HAVE(TERR) (TERR > tt_offset && TERR < (tt_offset + tt_per_rank))
+#define NEXT_RANK_FROM(R) (R+1 == commSize ? 0 : R+1)
+#define PREV_RANK_FROM(R) ((R == 0) ? commSize-1 : R-1)
+#define RECV 0
+#define SEND 1
+
 
 #include "risk_input.h"
 
@@ -58,11 +64,6 @@ void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs,
 	}
 }
 
-void print_graph( int myRank ) {
-
-}
-
-
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i, j;
@@ -77,6 +78,9 @@ int main( int argc, char **argv ) {
 	int **adjMatrix; //Adjacency matrix
 	int **edgeActivity; //Edge data (passed around)
 
+	MPI_Datatype MATRIX_ROW;
+	MPI_Request *requests;
+
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 	MPI_Comm_size( MPI_COMM_WORLD, &commSize );
@@ -85,10 +89,58 @@ int main( int argc, char **argv ) {
 		printf("Commsize is %d\n", commSize);
 	}
 
+
 	//Rank 0 reads header information and sends to everybody else
 	if (myRank == 0) {
 		read_header_info( &tt_total );
 	}
+
+	MPI_Type_contiguous( tt_total, MPI_INT, &MATRIX_ROW );
+
+	typedef struct battle_calc_msg_t {
+		int source_rank;
+		int row_offset;
+		int *adjSlice[tt_total];
+		int *edgeSlice[tt_total];
+		int *adjCalculated[tt_total];
+		int *edgeResult[tt_total];
+	} BATTLE_CALC_MSG;
+
+	int SLICE_SIZE;
+	MPI_Type_size( MATRIX_ROW, &SLICE_SIZE );
+
+
+	int BCMSG_LENGTHS[6] = {
+		1,
+		1,
+		tt_per_rank,
+		tt_per_rank,
+		tt_per_rank,
+		tt_per_rank
+	};
+
+	MPI_Aint BCMSG_OFFSETS[6] = {
+		0,
+		sizeof(int), //Size of first element...
+		2 * sizeof(int), //... + Size of second element...
+		2 * sizeof(int) + tt_per_rank * SLICE_SIZE,
+		2 * sizeof(int) + 2 * tt_per_rank * SLICE_SIZE,
+		2 * sizeof(int) + 3 * tt_per_rank * SLICE_SIZE
+	};
+
+	MPI_Datatype BCMSG_TYPES[6] = {
+		MPI_INT,
+		MPI_INT,
+		MATRIX_ROW,
+		MATRIX_ROW,
+		MATRIX_ROW,
+		MATRIX_ROW
+	};
+
+	MPI_Datatype MPI_BCMSG;
+	MPI_Type_create_struct( 6, BCMSG_LENGTHS, BCMSG_OFFSETS, BCMSG_TYPES, &MPI_BCMSG );
+	MPI_Type_commit( &MPI_BCMSG );
+
 
 	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
@@ -97,6 +149,8 @@ int main( int argc, char **argv ) {
 	
 	//Now use the known total territory count to init other variables
 	tt_per_rank = tt_total / commSize;
+
+	requests = calloc( 2, sizeof(MPI_Request) );
 	
 	troopCounts = calloc( tt_total, sizeof(int) );
 	teamIDs = calloc ( tt_total, sizeof(int) );
@@ -132,6 +186,7 @@ int main( int argc, char **argv ) {
 
 	printf("MPI Rank %d initalized\n", myRank);
 	
+	/*
 	sleep(myRank + 1);
 	//DEBUG
 	for(i = 0; i < tt_per_rank; i++) {
@@ -141,7 +196,7 @@ int main( int argc, char **argv ) {
 		}
 		printf("\n");
 	}
-	
+	*/
 
 	//MAIN LOOP (set up for one iteration for now)
 	
@@ -184,7 +239,49 @@ int main( int argc, char **argv ) {
 
 	MPI_Barrier( MPI_COMM_WORLD );
 
+	printf("[%d] Beginning result exchange\n", myRank);
 	//Do math for each battle to find the winner and how many troops the winner has left
+	BATTLE_CALC_MSG *recvBuffer = calloc( 1, sizeof(BATTLE_CALC_MSG) );
+	BATTLE_CALC_MSG *sendBuffer = calloc( 1, sizeof(BATTLE_CALC_MSG) );
+	for ( i = 0; i < tt_per_rank; i++ ) {
+		recvBuffer->adjSlice[i] = calloc( tt_total, sizeof(int) );
+		recvBuffer->edgeSlice[i] = calloc( tt_total, sizeof(int) );
+		recvBuffer->adjCalculated[i] = calloc( tt_total, sizeof(int) );
+		recvBuffer->edgeResult[i] = calloc( tt_total, sizeof(int) );
+
+		sendBuffer->adjSlice[i] = calloc( tt_total, sizeof(int) );
+		sendBuffer->edgeSlice[i] = calloc( tt_total, sizeof(int) );
+		sendBuffer->adjCalculated[i] = calloc( tt_total, sizeof(int) );
+		sendBuffer->edgeResult[i] = calloc( tt_total, sizeof(int) );
+	}
+
+	recvBuffer->source_rank = myRank;
+	recvBuffer->row_offset = tt_offset;
+
+	for ( j = 0; j < tt_per_rank; j++ ) {
+		memcpy( sendBuffer->adjSlice[j], adjMatrix[j], tt_total * sizeof(int) );
+		memcpy( sendBuffer->edgeSlice[j], edgeActivity[j], tt_total * sizeof(int) );
+	}
+	printf("[%d] RecvBuffer Populated!\n", myRank);
+
+	for ( i = 0; i < commSize; i++ ) {
+		//Assume information we've just finished working on is in recvBuffer.
+		//Move the received info to the send buffer.
+		sendBuffer->source_rank = recvBuffer->source_rank;
+		sendBuffer->row_offset = recvBuffer->row_offset;
+
+		for ( j = 0; j < tt_per_rank; j++ ) {
+			memcpy( sendBuffer->adjSlice[j], recvBuffer->adjSlice[j], tt_total * sizeof(int) );
+			memcpy( sendBuffer->edgeSlice[j], recvBuffer->edgeSlice[j], tt_total * sizeof(int) );
+			memcpy( sendBuffer->adjCalculated[j], recvBuffer->adjCalculated[j], tt_total * sizeof(int) );
+			memcpy( sendBuffer->edgeResult[j], recvBuffer->edgeResult[j], tt_total * sizeof(int) );
+		}
+		MPI_Irecv( recvBuffer, 1, MPI_BCMSG, PREV_RANK_FROM(myRank), 0, MPI_COMM_WORLD, &requests[RECV] );
+		MPI_Isend( sendBuffer, 1, MPI_BCMSG, NEXT_RANK_FROM(myRank), 0, MPI_COMM_WORLD, &requests[SEND] );
+		MPI_Waitall( 2, requests, MPI_STATUSES_IGNORE );
+	}
+
+
 	//Everyone calculates everything
 	//Each edge calc done twice... take one of them
 

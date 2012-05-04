@@ -54,6 +54,7 @@ int main()
 	battle(MAXTROOPS, MAXTROOPS * .75);
 	battle(MAXTROOPS, MAXTROOPS * .5);
 	battle(MAXTROOPS, MAXTROOPS * .25);
+	return 0;
 }
 
 
