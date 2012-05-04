@@ -5,8 +5,8 @@
 
 #define SEED 0
 #define TRIALS 10
-#define BATTLES 100//0000
-#define MAXTROOPS 1000
+#define BATTLES 10000000
+#define MAXTROOPS 100000
 
 int do_battle(int teamA, int teamB)
 {
@@ -18,7 +18,6 @@ int do_battle(int teamA, int teamB)
 
 void battle(int teamA, int teamB)
 {
-	int a, b;
 	int a_wins = 0;
 	int b_wins = 0;
 	int ties = 0;
