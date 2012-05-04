@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include "mpi.h"
 
+#define ASSIGN_ATTACK(E, NUM) (E = NUM)
+#define ASSIGN_DEFENSE(E, NUM) (E = (-1) * NUM)
+
 #include "risk_input.h"
 
 //GIANT IDEA:
@@ -10,25 +13,36 @@
 //every phase and it will get conquered pretty damn fast (battle resolution should report no troops lost if a team
 //fights an army with 0 troops)
 
-//Apply the strategy for team <teamID> by looking at the troop counts and controlling teams for 
+//Apply the strategy for team <teamID> on country <territory> by looking at the troop counts and controlling teams for 
 //each node on the map. Use the adjacency matrix to figure out our neighbors.  Place results in edgeActivity
-void apply_strategy(int teamID, int tt_total, int* troopCounts, int* teamIDs, int* adjMatrix, int* edgeActivity)
+void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs, int *adjList, int *outboundEdge)
 {
 	//simple strategy to test and debug with - split troops evenly on all edges, all attacking
 	//if there is a remainder of troops, don't do anything with them
-	int myTroops = troopCounts[teamID];
+	int myTroops = troopCounts[territory];
 	int neighborCount = 0;
 	int i;
 	for( i = 0; i < tt_total; i++ ) {
 		//don't need to attack my own team
-		neighborCount += adjMatrix[i] && teamIDs[i] != teamID;
+		neighborCount += ( adjList[i] == 1 ) && ( teamIDs[i] != teamIDs[territory] );
 	}
 	
-	int remainder = myTroops % neighborCount;
-	int troopsPerNeighbor = (myTroops - remainder) / neighborCount;
-	for( i = 0; i < tt_total; i++ ) {
+	//int remainder = myTroops % neighborCount;
+	//int troopsPerRival = (myTroops - remainder) / neighborCount;
+	//Can't we use integer division here?
+	int troopsPerRival = myTroops / neighborCount;
 
-	}	
+	//Place troops on each edge, all attacking.
+	for( i = 0; i < tt_total; i++ ) {
+		if( adjList[i] == 1 && teamIDs[i] != teamIDs[territory] ) {
+			ASSIGN_ATTACK(outboundEdge[i], troopsPerRival);
+		}
+	}
+}
+
+void print_graph( int myRank, int **adj, int *scores, int **edges, int total_tt ) {
+	int i;
+	for (int i = 0; i < )
 }
 
 int main( int argc, char **argv ) {
@@ -46,7 +60,7 @@ int main( int argc, char **argv ) {
 	int **edgeActivity; //Edge data (passed around)
 
 	int tt_per_rank; //Number of territories per MPI Rank
-	int tt_start; //Which territory do we start with? (which is the first territory in our set)
+	int tt_offset; //Which territory do we start with? (which is the first territory in our set)
 
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
@@ -84,7 +98,7 @@ int main( int argc, char **argv ) {
 	int* troopCounts_temp = calloc( total_tt, sizeof(int) );
 	int* teamIDs_temp = calloc( total_tt, sizeof(int) );
 	
-	tt_start = read_from_file( total_tt, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
+	tt_offset = read_from_file( total_tt, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
 
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, total_tt, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
@@ -100,7 +114,7 @@ int main( int argc, char **argv ) {
 		printf("==============================================\n");
 		printf("TERRITORY | NUM_TROOPS\n");
 		for (i = 0; i < total_tt; i++) {
-			printf("%9d | %10d\n", i+tt_start, troopCounts[i]);
+			printf("%9d | %10d\n", i+tt_offset, troopCounts[i]);
 		}
 	}
 
@@ -109,7 +123,7 @@ int main( int argc, char **argv ) {
 	//DEBUG
 	int j;
 	for(i = 0; i < tt_per_rank; i++) {
-		printf("TT %d : ", i+tt_start);
+		printf("TT %d : ", i+tt_offset);
 		for(j = 0; j < total_tt; j++) {
 			printf("%d ", adjMatrix[i][j]);
 		}
@@ -119,7 +133,8 @@ int main( int argc, char **argv ) {
 	//MAIN LOOP (set up for one iteration for now)
 	
 	for( i = 0; i < tt_per_rank; i++ ) {
-		apply_strategy( teamIDs[tt_start + i], tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
+		//Apply a battle strategy for each node this Rank is responsible for
+		apply_strategy( tt_offset+i, total_tt, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 	}
 
 	MPI_Finalize();
