@@ -1,70 +1,60 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define SEED 0
 #define TRIALS 10
-#define BATTLES 25
-#define MAXTROOPS 100
+#define BATTLES 100//0000
+#define MAXTROOPS 1000
 
-void do_battle(int* teamA, int* teamB)
+int do_battle(int teamA, int teamB)
 {
-	double a = *teamA;
-	double b = *teamB;
-
-	int battles = a < b ? a : b;
-	double afactor = a / b < 1 ? 0 : (a / b);
-	printf("AFACTOR %f\n", afactor);
-	double bfactor = b / a < 1 ? 0 : (b / a);
-	printf("BFACTOR %f\n", bfactor);
+	int a_roll = rand() % (teamA + 1); // 0 to 5
+	int b_roll = rand() % (teamB + 1); // 0 to 4
 	
-	int i, j;
-	for(i = 0; i < battles; i++)
-	{
-		double a_score = 0;
-		j = 0;
-		do
-		{
-			j++;
-			a_score += j < afactor? (rand() % 6 + 1) : (rand() % 6 + 1) * (afactor - j);
-		}
-	       	while(j < afactor);
-
-		double b_score = 0;
-		j = 0;
-		do
-		{
-			j++;
-			b_score += j < bfactor? (rand() % 6 + 1) : (rand() % 6 + 1) * (bfactor - j);
-		}
-	       	while(j < afactor);
-		
-		(*teamA) -= (b_score >= a_score);
-		(*teamB) -= (a_score >= b_score);
-	}
+	return a_roll - b_roll;
 }
 
 void battle(int teamA, int teamB)
 {
-	int a = teamA;
-	int b = teamB;
+	int a, b;
+	int a_wins = 0;
+	int b_wins = 0;
+	int ties = 0;
+	double a_tleft = 0;
+	double b_tleft = 0;
 
-	printf("Battling A with %d troops versus B with %d troops...\n", teamA, teamB);
-	do_battle(&a, &b);
-	printf("Team A has %d troops left over\n", a);
-	printf("Team B has %d troops left over\n", b);
+	printf("Simulating %d battles, A with %d troops versus B with %d troops...\n", BATTLES, teamA, teamB);
+	
+	int i;
+	for(i = 0; i < BATTLES; i++)
+	{
+		int result = do_battle(teamA, teamB);
+
+		a_wins += result > 0;
+		b_wins += result < 0;
+		ties += result == 0;
+
+		a_tleft += result > 0 ? result : 0;
+		b_tleft += result < 0 ? -result : 0;
+	}
+
+	double aleft = a_tleft / a_wins;
+	double bleft = b_tleft / b_wins;
+	printf("A won %d battles and on average had %5.2lf percent of its army left after victory (%f troops)\n", a_wins, aleft / teamA * 100, floor(aleft));
+	printf("B won %d battles and on average had %5.2lf percent of its army left after victory (%f troops)\n", b_wins, bleft / teamB * 100, floor(bleft));
 	printf("\n");
 }
 
 int main()
 {
-	srand(SEED);
-	int i;
-	for(i = 0; i < BATTLES; i++)
-	{
-		battle(rand() % MAXTROOPS, rand() % MAXTROOPS);
-	}
+	srand(time(NULL));
 
+	battle(MAXTROOPS, MAXTROOPS);
+	battle(MAXTROOPS, MAXTROOPS * .75);
+	battle(MAXTROOPS, MAXTROOPS * .5);
+	battle(MAXTROOPS, MAXTROOPS * .25);
 }
 
 
