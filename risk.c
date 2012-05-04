@@ -265,6 +265,7 @@ int main( int argc, char **argv ) {
 	printf("[%d] RecvBuffer Populated!\n", myRank);
 
 	for ( i = 0; i < commSize; i++ ) {
+		printf("[%d] Boxing up rank %d's data...\n", myRank, recvBuffer->source_rank);
 		//Assume information we've just finished working on is in recvBuffer.
 		//Move the received info to the send buffer.
 		sendBuffer->source_rank = recvBuffer->source_rank;
