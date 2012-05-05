@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "mpi.h"
 
 #define ASSIGN_ATTACK(E, NUM) (E = NUM)
@@ -236,7 +237,7 @@ int main( int argc, char **argv ) {
 	// - Work on the data in the SEND buffer
 	// - Wait for SEND/RECV requests to complete for the next iteration of the I-loop
 	// - Flip buffer switch ( SEND buffer becomes the RECV buffer [we're done with that data]; RECV becomes the SEND buffer )
-	// - But don't send when i = commSize-1 because 
+	// - But don't send when i = commSize-1 because we don't need to
 
 	//3 procs
 	/*
@@ -259,22 +260,6 @@ int main( int argc, char **argv ) {
 	SEND to i+1, RECV from i-1 <=== this one is only useful if we're RECVing into our Rank's actual data store (<spoiler>we're not.</spoiler>)
 
 */
-
-	/*
-	int MPI_Isend(void *buf, int count, MPI_Datatype datatype, int dest,
-    	int tag, MPI_Comm comm, MPI_Request *request)
-
-    int MPI_Irecv(void *buf, int count, MPI_Datatype datatype,
-        int source, int tag, MPI_Comm comm, MPI_Request *request)
-
-     MPI_Status Public Attributes:
-		int 	MPI_SOURCE
-		int 	MPI_TAG
-		int 	MPI_ERROR
-		int 	size
-		int 	reserved [2]
-
-    */
 
 	statuses[SEND].MPI_SOURCE = myRank;
 	statuses[SEND].MPI_TAG = tt_offset;
@@ -308,7 +293,15 @@ int main( int argc, char **argv ) {
 					}
 
 					if ( isMyJob ) {
-						printf("[%d] Battle between Terr #%d and Terr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
+						int myNumTroops = edgeActivity[k][other_tt_num];
+						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
+						printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
+						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+						
+						int result = do_battle( myNumTroops, otherNumTroops );
+						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
+						edgeResults[ k ][ other_tt_num ] = result;
 					}
 				}
 			}
