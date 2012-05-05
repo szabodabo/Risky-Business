@@ -109,6 +109,9 @@ int main( int argc, char **argv ) {
 		read_header_info( &tt_total );
 	}
 
+	//Now use the known total territory count to init other variables
+	tt_per_rank = tt_total / commSize;
+
 	//MPI_Type_contiguous( tt_total, MPI_INT, &MATRIX_ROW );
 
 	typedef struct battle_calc_msg_t {
@@ -153,14 +156,11 @@ int main( int argc, char **argv ) {
 	MPI_Type_create_struct( 6, BCMSG_LENGTHS, BCMSG_OFFSETS, BCMSG_TYPES, &MPI_BCMSG );
 	MPI_Type_commit( &MPI_BCMSG );
 
-
+	//printf("[%d] Her 6e\n", myRank);
 	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
 	MPI_Allreduce( &tt_total, &temp_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	tt_total = temp_tt;
-	
-	//Now use the known total territory count to init other variables
-	tt_per_rank = tt_total / commSize;
 
 	requests = calloc( 2, sizeof(MPI_Request) );
 	statuses = calloc( 2, sizeof(MPI_Status) );
@@ -171,6 +171,7 @@ int main( int argc, char **argv ) {
 	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
 	myBattleFlips = calloc( tt_per_rank, sizeof(int *) );
+	//printf("[%d] Here 7\n", myRank);
 
 
 	for (i = 0; i < tt_per_rank; i++) {
@@ -178,16 +179,29 @@ int main( int argc, char **argv ) {
 		adjMatrix[i] = calloc( tt_total, sizeof(int) );
 		myBattleFlips[i] = calloc( tt_total, sizeof(int) );
 	}
+	printf("[%d] Here 8\n", myRank);
+	printf("[%d] tt_total is %d; \n", myRank, tt_total);
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	//Temp variables to enable all-reduce (might use these later when communicating further results)	
 	int* troopCounts_temp = calloc( tt_total, sizeof(int) );
 	int* teamIDs_temp = calloc( tt_total, sizeof(int) );
-	
+	printf("[%d] Here 3247\n", myRank);
+
 	tt_offset = read_from_file( tt_total, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
+
+	printf("[%d] Here 999\n", myRank);
+	MPI_Barrier(MPI_COMM_WORLD);
+	sleep(1);
 
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+
+
+
+	
+
 	
 	if (myRank == 0) {
 		printf("tt_total is %d\n", tt_total);
