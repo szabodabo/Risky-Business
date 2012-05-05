@@ -74,16 +74,17 @@ int main(int argc, char* argv[])
 		int fd = open(argv[1], O_RDONLY);
 		int size;
 		read(fd, &size, sizeof(int));
-		int* buf = calloc(st.st_size / sizeof(int), sizeof(int));
+		int* buf = calloc(size * size, sizeof(int));
 		read(fd, buf, st.st_size);
 
 		int i;
-		for(i = 0; i < st.st_size / sizeof(int); i++)
+		for(i = 0; i < size * size; i++)
 		{
 			if(i != 0 && i % size == 0)
 				printf("\n");
 			printf("%d ", buf[i]);
 		}
+		printf("\n");
 	}
 
 	return EXIT_SUCCESS;

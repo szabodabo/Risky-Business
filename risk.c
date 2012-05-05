@@ -14,12 +14,15 @@
 #define TAILS 2
 #define COIN_FLIP 2
 #define ACC(A, R, C) A[tt_total * R + C]
+#define DEBUG() //printf("[%d] DEBUG %d\n", myRank, debug_num++);
 
 #include "risk_input.h"
 
 int tt_per_rank = 0; //Number of territories per MPI Rank
 int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
 int tt_total = 0; //Total number of territories being warred
+
+int debug_num = 0;
 
 typedef enum answer_t {
 	YES, NO
@@ -83,6 +86,8 @@ int main( int argc, char **argv ) {
 
 	srand(2); //BIG COMMENT
 
+	DEBUG();
+
 	//Everyone has each of these arrays in FULL
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
@@ -104,13 +109,17 @@ int main( int argc, char **argv ) {
 		read_header_info( &tt_total );
 	}
 
-	//Now use the known total territory count to init other variables
-	tt_per_rank = tt_total / commSize;
+	DEBUG();
 
 	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
 	MPI_Allreduce( &tt_total, &temp_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	tt_total = temp_tt;
+
+	//Now use the known total territory count to init other variables
+	tt_per_rank = tt_total / commSize;
+
+	DEBUG();
 	
 	troopCounts = calloc( tt_total, sizeof(int) );
 	teamIDs = calloc ( tt_total, sizeof(int) );
@@ -125,6 +134,8 @@ int main( int argc, char **argv ) {
 		edgeResults[i] = calloc( tt_total, sizeof(int) ); 
 	}
 
+	DEBUG();
+
 	//Create memory for our MPI Requests/Statuses
 	statuses = calloc( 2, sizeof(MPI_Status) );
 	requests = calloc( 2, sizeof(MPI_Request) );
@@ -134,6 +145,7 @@ int main( int argc, char **argv ) {
 	int* teamIDs_temp = calloc( tt_total, sizeof(int) );
 
 	tt_offset = read_from_file( tt_total, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
+	DEBUG();
 
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
@@ -206,7 +218,7 @@ int main( int argc, char **argv ) {
 		memcpy( mpi_buffer[SEND] + j*tt_total, edgeActivity[j], tt_total * sizeof(int) );
 	}
 
-	printf("[%d] RecvBuffer Populated!\n", myRank);
+	//printf("[%d] RecvBuffer Populated!\n", myRank);
 
 	//Hot potato should: 
 
@@ -237,12 +249,44 @@ int main( int argc, char **argv ) {
 	SEND to i+1, RECV from i-1 <=== this one is only useful if we're RECVing into our Rank's actual data store (<spoiler>we're not.</spoiler>)
 
 */
+
+	/*
+	int MPI_Isend(void *buf, int count, MPI_Datatype datatype, int dest,
+    	int tag, MPI_Comm comm, MPI_Request *request)
+
+    int MPI_Irecv(void *buf, int count, MPI_Datatype datatype,
+        int source, int tag, MPI_Comm comm, MPI_Request *request)
+
+     MPI_Status Public Attributes:
+		int 	MPI_SOURCE
+		int 	MPI_TAG
+		int 	MPI_ERROR
+		int 	size
+		int 	reserved [2]
+
+    */
+
+	statuses[SEND].MPI_SOURCE = myRank;
+	statuses[SEND].MPI_TAG = tt_offset;
+
 	for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
 		//Post requests if we need to
+		if ( i < commSize - 1 ) {
+			MPI_Isend( mpi_buffer[SEND], tt_total * tt_per_rank, MPI_INT, NEXT_RANK_FROM(myRank), statuses[SEND].MPI_TAG, MPI_COMM_WORLD, &requests[SEND] );
+			MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
+		}
 		//Work on data
+		printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
+
 		//Wait for requests
+		MPI_Waitall( 2, requests, statuses );
+
 		//Flip buffer switch
+		buffer_switch = !buffer_switch;
 	}
+
+	MPI_Finalize();
+	return EXIT_SUCCESS;
 
 
 	//Everyone calculates everything
