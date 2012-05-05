@@ -8,8 +8,8 @@
 #define I_HAVE(TERR) (TERR > tt_offset && TERR < (tt_offset + tt_per_rank))
 #define NEXT_RANK_FROM(R) (R+1 == commSize ? 0 : R+1)
 #define PREV_RANK_FROM(R) ((R == 0) ? commSize-1 : R-1)
-#define RECV 0
-#define SEND 1
+#define RECV buffer_switch
+#define SEND !buffer_switch
 #define HEADS 1
 #define TAILS 2
 #define COIN_FLIP 2
@@ -79,6 +79,7 @@ void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs,
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i, j, k;
+	int buffer_switch = 0;
 
 	srand(2); //BIG COMMENT
 
@@ -89,20 +90,14 @@ int main( int argc, char **argv ) {
 	//Everyone has their own slice of these arrays
 	int **adjMatrix; //Adjacency matrix
 	int **edgeActivity; //Edge data (passed around)
-	int **myBattleFlips;
+	int **edgeResults;
 
-	//MPI_Datatype MATRIX_ROW;
-	MPI_Request *requests;
 	MPI_Status *statuses;
-
+	MPI_Request *requests;
+	
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 	MPI_Comm_size( MPI_COMM_WORLD, &commSize );
-
-	if (myRank == 0) {
-		printf("Commsize is %d\n", commSize);
-	}
-
 
 	//Rank 0 reads header information and sends to everybody else
 	if (myRank == 0) {
@@ -112,97 +107,39 @@ int main( int argc, char **argv ) {
 	//Now use the known total territory count to init other variables
 	tt_per_rank = tt_total / commSize;
 
-	//MPI_Type_contiguous( tt_total, MPI_INT, &MATRIX_ROW );
-
-	typedef struct battle_calc_msg_t {
-		int source_rank;
-		int row_offset;
-		int *adjSlice;
-		int *edgeSlice;
-		int *battleFlip;
-		int *edgeResult;
-	} BATTLE_CALC_MSG;
-
-	int SLICE_LEN = tt_per_rank * tt_total;
-
-	int BCMSG_LENGTHS[6] = {
-		1,
-		1,
-		SLICE_LEN,
-		SLICE_LEN,
-		SLICE_LEN,
-		SLICE_LEN
-	};
-
-	MPI_Aint BCMSG_OFFSETS[6] = {
-		0,
-		sizeof(int), //Size of first element...
-		2 * sizeof(int), //... + Size of second element...
-		2 * sizeof(int) + SLICE_LEN * sizeof(int),
-		2 * sizeof(int) + 2 * SLICE_LEN * sizeof(int),
-		2 * sizeof(int) + 3 * SLICE_LEN * sizeof(int)
-	};
-
-	MPI_Datatype BCMSG_TYPES[6] = {
-		MPI_INT,
-		MPI_INT,
-		MPI_INT,
-		MPI_INT,
-		MPI_INT,
-		MPI_INT
-	};
-
-	MPI_Datatype MPI_BCMSG;
-	MPI_Type_create_struct( 6, BCMSG_LENGTHS, BCMSG_OFFSETS, BCMSG_TYPES, &MPI_BCMSG );
-	MPI_Type_commit( &MPI_BCMSG );
-
-	//printf("[%d] Her 6e\n", myRank);
 	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
 	MPI_Allreduce( &tt_total, &temp_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	tt_total = temp_tt;
-
-	requests = calloc( 2, sizeof(MPI_Request) );
-	statuses = calloc( 2, sizeof(MPI_Status) );
 	
 	troopCounts = calloc( tt_total, sizeof(int) );
 	teamIDs = calloc ( tt_total, sizeof(int) );
 
-	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
-	myBattleFlips = calloc( tt_per_rank, sizeof(int *) );
-	//printf("[%d] Here 7\n", myRank);
-
+	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
+	edgeResults = calloc( tt_per_rank, sizeof(int *) );
 
 	for (i = 0; i < tt_per_rank; i++) {
-		edgeActivity[i] = calloc( tt_total, sizeof(int) );
 		adjMatrix[i] = calloc( tt_total, sizeof(int) );
-		myBattleFlips[i] = calloc( tt_total, sizeof(int) );
+		edgeActivity[i] = calloc( tt_total, sizeof(int) );
+		edgeResults[i] = calloc( tt_total, sizeof(int) ); 
 	}
-	printf("[%d] Here 8\n", myRank);
-	printf("[%d] tt_total is %d; \n", myRank, tt_total);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	//Create memory for our MPI Requests/Statuses
+	statuses = calloc( 2, sizeof(MPI_Status) );
+	requests = calloc( 2, sizeof(MPI_Request) );
+
 	//Temp variables to enable all-reduce (might use these later when communicating further results)	
 	int* troopCounts_temp = calloc( tt_total, sizeof(int) );
 	int* teamIDs_temp = calloc( tt_total, sizeof(int) );
-	printf("[%d] Here 3247\n", myRank);
 
 	tt_offset = read_from_file( tt_total, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
-
-	printf("[%d] Here 999\n", myRank);
-	MPI_Barrier(MPI_COMM_WORLD);
-	sleep(1);
 
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
-
-
-	
-
-	
+	// Print all territory current total troop counts
 	if (myRank == 0) {
 		printf("tt_total is %d\n", tt_total);
 		printf("==============================================\n");
@@ -214,20 +151,6 @@ int main( int argc, char **argv ) {
 		}
 	}
 
-	printf("MPI Rank %d initalized\n", myRank);
-	
-	/*
-	sleep(myRank + 1);
-	//DEBUG
-	for(i = 0; i < tt_per_rank; i++) {
-		printf("TT %d : ", i+tt_offset);
-		for(j = 0; j < tt_total; j++) {
-			printf("%d ", adjMatrix[i][j]);
-		}
-		printf("\n");
-	}
-	*/
-
 	//MAIN LOOP (set up for one iteration for now)
 	
 	for( i = 0; i < tt_per_rank; i++ ) {
@@ -236,6 +159,8 @@ int main( int argc, char **argv ) {
 	}
 
 /*
+	//Graph printing
+
 	MPI_Barrier(MPI_COMM_WORLD);
 	sleep(1);
 	if (myRank == 0) {
@@ -267,148 +192,56 @@ int main( int argc, char **argv ) {
 	if (myRank == 0) {
 		printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
 	}
-	*/
+*/
 
 	MPI_Barrier( MPI_COMM_WORLD );
-
 	printf("[%d] Beginning result exchange\n", myRank);
-	BATTLE_CALC_MSG *recvBuffer = calloc( 1, sizeof(BATTLE_CALC_MSG) );
-	BATTLE_CALC_MSG *sendBuffer = calloc( 1, sizeof(BATTLE_CALC_MSG) );
 
-	//Allocate memory for send/receive buffers
-	for ( i = 0; i < tt_per_rank; i++ ) {
-		recvBuffer->adjSlice = calloc( tt_total * tt_per_rank, sizeof(int) );
-		recvBuffer->edgeSlice = calloc( tt_total * tt_per_rank, sizeof(int) );
-		recvBuffer->battleFlip = calloc( tt_total * tt_per_rank, sizeof(int) );
-		recvBuffer->edgeResult = calloc( tt_total * tt_per_rank, sizeof(int) );
+	int *mpi_buffer[2];
+	mpi_buffer[SEND] = calloc( tt_total * tt_per_rank, sizeof(int) );
+	mpi_buffer[RECV] = calloc( tt_total * tt_per_rank, sizeof(int) );
 
-		sendBuffer->adjSlice = calloc( tt_total * tt_per_rank, sizeof(int) );
-		sendBuffer->edgeSlice = calloc( tt_total * tt_per_rank, sizeof(int) );
-		sendBuffer->battleFlip = calloc( tt_total * tt_per_rank, sizeof(int) );
-		sendBuffer->edgeResult = calloc( tt_total * tt_per_rank, sizeof(int) );
-	}
-
-	recvBuffer->source_rank = myRank;
-	recvBuffer->row_offset = tt_offset;
-
-	for ( i = 0; i < tt_per_rank; i++ ) {
-		for ( j = 0; j < tt_total; j++ ) {
-			
-			/* ==================== COIN FLIP ===================
-			To decide which territory's rank computes the result on an edge:
-
-			If the flips are the same, the territory with the lower ID 
-			  is responsible for the calculation.
-			If the flips are different, the terrirory with the higher ID
-			  is responsible for the calculation.
-			This should evenly distribute the work among the ranks and should
-			  solve the lower-IDed-territories-have-more-work problem. 
-			There might be a more efficient way to to this, 
-			  but this seemed pretty good when I was working on it.  -DJS    */
-
-			myBattleFlips[i][j] = diceRoll(COIN_FLIP);
-			//printf("[%d] MyBattleFlips[%d][%d]: %d\n", myRank, i, j, myBattleFlips[i][j]);
-		}
-	}
-
+	//LINEARIZE BUFFER DATA
 	for ( j = 0; j < tt_per_rank; j++ ) {
-		memcpy( recvBuffer->adjSlice + j * tt_total, adjMatrix[j], tt_total * sizeof(int) );
-		memcpy( recvBuffer->edgeSlice + j * tt_total, edgeActivity[j], tt_total * sizeof(int) );
-		memcpy( recvBuffer->battleFlip + j * tt_total, myBattleFlips[j], tt_total * sizeof(int) );
+		memcpy( mpi_buffer[SEND] + j*tt_total, edgeActivity[j], tt_total * sizeof(int) );
 	}
 
-	/*for ( i = 0; i < tt_per_rank; i++ ) {
-		for ( j = 0; j < tt_total; j++ ) {
-			
-		}
-	}*/
+	printf("[%d] RecvBuffer Populated!\n", myRank);
 
-	//printf("[%d] RecvBuffer Populated!\n", myRank);
+	//Hot potato should: 
 
+	// - Post SEND & RECV requests
+	// - Work on the data in the SEND buffer
+	// - Wait for SEND/RECV requests to complete for the next iteration of the I-loop
+	// - Flip buffer switch ( SEND buffer becomes the RECV buffer [we're done with that data]; RECV becomes the SEND buffer )
+	// - But don't send when i = commSize-1 because 
+
+	//3 procs
+	/*
+	i = 0
+	proc1 does data1
+	proc2 does data2
+	proc3 does data3
+	SEND to i+1, RECV from i-1
+
+	i = 1
+	proc1 does data3
+	proc2 does data1
+	proc3 does data2
+	SEND to i+1, RECV from i-1
+
+	i = 1
+	proc1 does data2
+	proc2 does data3
+	proc3 does data1
+	SEND to i+1, RECV from i-1 <=== this one is only useful if we're RECVing into our Rank's actual data store (<spoiler>we're not.</spoiler>)
+
+*/
 	for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
-
-		for ( j = 0; j < tt_per_rank; j++ ) {
-			for ( k = 0; k < tt_total; k++ ) {
-				printf("[%d] (T %d -- T %d ) RecvBufAdjSlice[%d][%d] = %d\n", myRank, j+recvBuffer->row_offset, k, j, k, ACC(recvBuffer->adjSlice, j, k));
-			}
-		}
-
-		for ( j = 0; j < tt_per_rank; j++ ) { // J -> my territories
-			for ( k = 0; k < tt_per_rank; k++ ) { // K -> territories in currently received slice
-
-				//Don't even bother if we're on the diagonal
-				if ( tt_offset+j == recvBuffer->row_offset+k ) { continue; }
-
-				//printf("[%d] RecvBattleFlips[%d][%d]: %d\n", myRank, i, j, recvBuffer->battleFlip[k][j]);
-
-				printf("[%d] I [terr %d] flipped %d; Foe [terr %d] (rank %d) flipped %d\n", myRank, tt_offset+j, myBattleFlips[ j ][ recvBuffer->row_offset+k ], recvBuffer->row_offset+k, recvBuffer->source_rank, ACC(recvBuffer->battleFlip, k, tt_offset+j) );
-				char sameFlip = ACC(recvBuffer->battleFlip, k, tt_offset+j) == myBattleFlips[j][recvBuffer->row_offset+k];
-				char iAmHigher = tt_offset+j > recvBuffer->row_offset+k;
-				char isMyJob;
-				if (sameFlip == 1) {
-					if (iAmHigher == 0) {
-						isMyJob = 1;
-					} else {
-						isMyJob = 0;
-					}
-				} else { //Different Flips
-					if (iAmHigher == 1) {
-						isMyJob = 1;
-					} else {
-						isMyJob = 0;
-					}
-				}
-				printf("[%d] J: %d; J-Offset: %d; K: %d\n", myRank, j, tt_offset, k);
-				printf( "[%d] My Job: %d; Borders: %d\n", myRank, isMyJob, ACC(recvBuffer->adjSlice, k, tt_offset+j) );
-
-				//If there's an adjacency, I'll decide the battle if it's my job to do so
-				if ( ACC(recvBuffer->adjSlice, k, tt_offset+j) == 1 && isMyJob == 1 ) {
-					
-					int myNode_power = edgeActivity[ j ][ recvBuffer->row_offset+k ];
-					int otherNode_power = ACC(recvBuffer->edgeSlice, k, tt_offset+j);
-
-					int result = do_battle( myNode_power, otherNode_power );
-
-					//IF RESULT < 0:
-					// otherNode won (with *-result* troops surviving the attack)
-					// but otherNode will see this as a win, so we'll store
-					// it as a positive value (negating it)
-					//IF RESULT > 0:
-					// myNode won (with *result* troops surviving the attack)
-					// but this is the otherNode's slot, so we'll negate it
-					ACC(recvBuffer->edgeResult, k, tt_offset+j) = -1 * result;
-					printf("[%d] Battle between MyNode %d and OtherNode %d: %d\n", myRank, tt_offset+j, recvBuffer->row_offset+k, result);					
-				}
-			}
-		}
-
-		printf("[%d] Boxing up rank %d's data...\n", myRank, recvBuffer->source_rank);
-		//Information we've just finished working on is in recvBuffer.
-		//Move the received info to the send buffer.
-		sendBuffer->source_rank = recvBuffer->source_rank;
-		sendBuffer->row_offset = recvBuffer->row_offset;
-
-		for ( j = 0; j < tt_per_rank; j++ ) {
-			memcpy( sendBuffer->adjSlice, recvBuffer->adjSlice, tt_total * tt_per_rank * sizeof(int) );
-			memcpy( sendBuffer->edgeSlice, recvBuffer->edgeSlice, tt_total * tt_per_rank * sizeof(int) );
-			memcpy( sendBuffer->battleFlip, recvBuffer->battleFlip, tt_total * tt_per_rank * sizeof(int) );
-			memcpy( sendBuffer->edgeResult, recvBuffer->edgeResult, tt_total * tt_per_rank * sizeof(int) );
-		}
-		MPI_Irecv( recvBuffer, 1, MPI_BCMSG, PREV_RANK_FROM(myRank), 0, MPI_COMM_WORLD, &requests[RECV] );
-		MPI_Isend( sendBuffer, 1, MPI_BCMSG, NEXT_RANK_FROM(myRank), 0, MPI_COMM_WORLD, &requests[SEND] );
-		MPI_Waitall( 2, requests, statuses );
-		for ( j = 0; j < 2; j++ ) {
-			printf("[%d] J=%d, Error = %d\n", myRank, j, statuses[j].MPI_ERROR);
-		}
-
-		printf("[%d] Completed Irecv of data from rank %d\n", myRank, recvBuffer->source_rank);
-
-
-		for ( j = 0; j < tt_per_rank; j++ ) {
-			for ( k = 0; k < tt_total; k++ ) {
-				printf("[%d] (T %d -- T %d ) RecvBufAdjSlice[%d][%d] = %d\n", myRank, j+recvBuffer->row_offset, k, j, k, ACC(recvBuffer->adjSlice, j, k));
-			}
-		}
+		//Post requests if we need to
+		//Work on data
+		//Wait for requests
+		//Flip buffer switch
 	}
 
 
