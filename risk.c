@@ -42,6 +42,13 @@ int do_battle(int teamA, int teamB)
 	return a_roll - b_roll;
 }
 
+void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
+	int i;
+	for ( i = 0; i < tt_per_rank; i++ ) {
+		coinFlips[tt_offset+i] = diceRoll(COIN_FLIP);
+	}
+}
+
 //GIANT IDEA:
 //Rule change --> it is totally legal to not leave any troops in your home node. If all troops from a node
 //get killed while away and nobody is left home, that's fine. That node just has 0 troops to allocate during
@@ -91,6 +98,7 @@ int main( int argc, char **argv ) {
 	//Everyone has each of these arrays in FULL
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
+	int *coinFlips; //Used to determine who is doing what calculation each round
 
 	//Everyone has their own slice of these arrays
 	int **adjMatrix; //Adjacency matrix
@@ -109,8 +117,6 @@ int main( int argc, char **argv ) {
 		read_header_info( &tt_total );
 	}
 
-	DEBUG();
-
 	//Use all-reduce to ensure all processes are aware of the total number of territories
 	int temp_tt;
 	MPI_Allreduce( &tt_total, &temp_tt, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
@@ -118,11 +124,12 @@ int main( int argc, char **argv ) {
 
 	//Now use the known total territory count to init other variables
 	tt_per_rank = tt_total / commSize;
-
-	DEBUG();
 	
 	troopCounts = calloc( tt_total, sizeof(int) );
 	teamIDs = calloc ( tt_total, sizeof(int) );
+	coinFlips = calloc ( tt_total, sizeof(int) );
+
+	//TODO: Make adjMatrix a char**
 
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
 	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
@@ -134,8 +141,6 @@ int main( int argc, char **argv ) {
 		edgeResults[i] = calloc( tt_total, sizeof(int) ); 
 	}
 
-	DEBUG();
-
 	//Create memory for our MPI Requests/Statuses
 	statuses = calloc( 2, sizeof(MPI_Status) );
 	requests = calloc( 2, sizeof(MPI_Request) );
@@ -143,13 +148,15 @@ int main( int argc, char **argv ) {
 	//Temp variables to enable all-reduce (might use these later when communicating further results)	
 	int* troopCounts_temp = calloc( tt_total, sizeof(int) );
 	int* teamIDs_temp = calloc( tt_total, sizeof(int) );
+	int* coinFlips_temp = calloc( tt_total, sizeof(int) );
 
 	tt_offset = read_from_file( tt_total, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
-	DEBUG();
+	do_my_coin_flips(myRank, tt_per_rank, tt_offset, coinFlips_temp);
 
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( coinFlips_temp, coinFlips, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
 	// Print all territory current total troop counts
 	if (myRank == 0) {
@@ -170,7 +177,7 @@ int main( int argc, char **argv ) {
 		apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 	}
 
-/*
+
 	//Graph printing
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -204,9 +211,10 @@ int main( int argc, char **argv ) {
 	if (myRank == 0) {
 		printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
 	}
-*/
+
 
 	MPI_Barrier( MPI_COMM_WORLD );
+	sleep(2);
 	printf("[%d] Beginning result exchange\n", myRank);
 
 	int *mpi_buffer[2];
@@ -276,7 +284,22 @@ int main( int argc, char **argv ) {
 			MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
 		}
 		//Work on data
-		printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
+		//printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
+
+		int working_offset = statuses[SEND].MPI_TAG;
+
+		for ( j = 0; j < tt_per_rank; j++ ) { // J -> territories in currently received slice (rows of send buffer)
+			for ( k = 0; k < tt_per_rank; k++ ) { // K -> my territories (columns of send buffer, also rows of my data)
+				int my_tt_num = tt_offset + k;
+				int other_tt_num = working_offset + j;
+
+				if ( my_tt_num == other_tt_num ) { continue; } //Don't even consider the global diagonal
+				//Do these two even border?
+				if ( adjMatrix[ k ][ other_tt_num ] ) {
+					printf("[%d] Battle between Terr #%d and Terr #%d\n", myRank, my_tt_num, other_tt_num);
+				}
+			}
+		}
 
 		//Wait for requests
 		MPI_Waitall( 2, requests, statuses );
