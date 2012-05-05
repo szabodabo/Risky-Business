@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "mpi.h"
 
 #define ASSIGN_ATTACK(E, NUM) (E = NUM)
@@ -91,9 +92,7 @@ int main( int argc, char **argv ) {
 	int i, j, k;
 	int buffer_switch = 0;
 
-	srand(2); //BIG COMMENT
-
-	DEBUG();
+	srand( myRank * time(NULL) ); //BIG COMMENT
 
 	//Everyone has each of these arrays in FULL
 	int *troopCounts; //Number of troops each territory has
@@ -177,7 +176,7 @@ int main( int argc, char **argv ) {
 		apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 	}
 
-
+ /*
 	//Graph printing
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -213,9 +212,12 @@ int main( int argc, char **argv ) {
 	}
 
 
-	MPI_Barrier( MPI_COMM_WORLD );
 	sleep(2);
-	printf("[%d] Beginning result exchange\n", myRank);
+
+	*/
+	MPI_Barrier( MPI_COMM_WORLD );
+
+	//printf("[%d] Beginning result exchange\n", myRank);
 
 	int *mpi_buffer[2];
 	mpi_buffer[SEND] = calloc( tt_total * tt_per_rank, sizeof(int) );
@@ -296,7 +298,18 @@ int main( int argc, char **argv ) {
 				if ( my_tt_num == other_tt_num ) { continue; } //Don't even consider the global diagonal
 				//Do these two even border?
 				if ( adjMatrix[ k ][ other_tt_num ] ) {
-					printf("[%d] Battle between Terr #%d and Terr #%d\n", myRank, my_tt_num, other_tt_num);
+					int sameFlip = coinFlips[my_tt_num] == coinFlips[other_tt_num];
+					int myNumLower = my_tt_num < other_tt_num;
+					int isMyJob = 0;
+					if (sameFlip) {
+						if (myNumLower) { isMyJob = 1; }
+					} else { //Different flips
+						if (!myNumLower) { isMyJob = 1; }
+					}
+
+					if ( isMyJob ) {
+						printf("[%d] Battle between Terr #%d and Terr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
+					}
 				}
 			}
 		}
