@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+#include <limits.h>
 #include "mpi.h"
 
 #include "lib/risk_macros.h"
@@ -25,6 +26,13 @@ int main( int argc, char **argv ) {
 	int tt_per_rank = 0; //Number of territories per MPI Rank
 	int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
 	int tt_total = 0; //Total number of territories being warred
+	int num_iterations = 0;
+	int max_iterations = INT_MAX;
+
+	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
+		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
+		printf("Caught max iterations of %d\n", max_iterations);
+	}
 
 	srand( myRank + time(NULL) ); //BIG COMMENT
 
@@ -112,6 +120,7 @@ int main( int argc, char **argv ) {
 	while ( loopCondition == 1 ) {
 
 		printf("Top of loop!\n");
+		num_iterations++;
 
 		for ( i = 0; i < tt_per_rank; i++ ) {
 			bzero( edgeActivity[i], tt_total * sizeof(int) );
@@ -449,7 +458,7 @@ int main( int argc, char **argv ) {
 		if ( loopCondition == 0 ) {
 			if ( myRank == 0 ) {
 				sleep(1);
-				printf("GAME OVER: Team %d wins.\n", curTeam);
+				printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
 			}
 		}
 
@@ -476,11 +485,17 @@ int main( int argc, char **argv ) {
 			if ( loopCondition == 0 ) {
 				if ( myRank == 0 ) {
 					sleep(1);
-					printf("GAME OVER: Team %d wins.\n", lastTeam);
+					printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
 				}
 			}
 		}
-
+		if ( loopCondition == 1 && num_iterations >= max_iterations ) {
+			loopCondition = 0;
+			if ( myRank == 0 ) {
+				sleep(1);
+				printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
+			}
+		}
 	}
 
 	MPI_Finalize();
