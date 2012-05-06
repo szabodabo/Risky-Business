@@ -169,7 +169,7 @@ int main( int argc, char **argv ) {
 	int **adjMatrix; //Adjacency matrix
 	int **edgeActivity; //Edge troop assignment data (passed around)
 	EDGE_RESULT **edgeResults; //What was the result of the conflict between my territories and other territories?
-	int **occupations; //How many troops from team [COL] are on the border of team [ROW]?
+	//int **occupations; //How many troops from team [COL] are on the border of team [ROW]?
 
 	MPI_Status *statuses;
 	MPI_Request *requests;
@@ -259,7 +259,7 @@ int main( int argc, char **argv ) {
 		//printf("Territories bordered by territory %d:\n", territoryID);
 		for ( j = 0; j < tt_total; j++ ) {
 			if ( adjMatrix[i][j] == 1 ) {
-				printf("\t\"%d (%d)\" -- \"%d (%d)\"", territoryID, troopCounts[territoryID], j, troopCounts[j]);
+				printf("\t\"%d{%d} (%d)\" -- \"%d{%d} (%d)\"", territoryID, teamIDs[territoryID], troopCounts[territoryID], j, teamIDs[j], troopCounts[j]);
 				int numToPrint = edgeActivity[i][j];
 				int posFlag = (numToPrint > 0);
 				if (posFlag == 1) {
@@ -500,6 +500,57 @@ int main( int argc, char **argv ) {
 		}
 		printf("\n");
 	}
+
+	bzero( teamIDs_temp, tt_total * sizeof(int) );
+	bzero( troopCounts_temp, tt_total * sizeof(int) );
+
+	for ( i = 0; i < tt_per_rank; i++ ) { // i -> my territory
+		//For now, just find the max number in here and call the owner the winner.
+		int maxNum = 0; int maxOwner = i+tt_offset;
+		for ( j = 0; j < tt_total; j++ ) { // troops from terr j in terr i
+			if ( ACC(mpi_buffer[SEND], i, j) > maxNum ) {
+				maxNum = ACC(mpi_buffer[SEND], i, j);
+				maxOwner = j;
+			}
+		}
+		//Owner of territory i is now maxOwner (and the territory has maxNum troops)
+		teamIDs_temp[tt_offset+i] = maxOwner;
+		troopCounts_temp[tt_offset+i] = maxNum; 
+	}
+
+	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
+
+	//Graph printing
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	sleep(1);
+	if (myRank == 0) {
+		printf("graph G {\n");
+	}
+
+	sleep(myRank + 1);
+	for ( i = 0; i < tt_per_rank; i++ ) {
+		int territoryID = tt_offset + i;
+		//printf("Territory %d owned by Rank %d\n", territoryID, myRank);
+		//printf("Territories bordered by territory %d:\n", territoryID);
+		for ( j = 0; j < tt_total; j++ ) {
+			if ( adjMatrix[i][j] == 1 ) {
+				printf("\t\"%d{%d} (%d)\" -- \"%d{%d} (%d)\"\n", territoryID, teamIDs[territoryID], troopCounts[territoryID], j, teamIDs[j], troopCounts[j]);
+			}
+		}
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	sleep(1);
+	if (myRank == 0) {
+		printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
+	}
+
+
+	sleep(2);
+
+	MPI_Barrier( MPI_COMM_WORLD );
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
