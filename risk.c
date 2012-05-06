@@ -133,7 +133,7 @@ int main( int argc, char **argv ) {
 			apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 		}
 
-		/*
+		
 		//Graph printing
 
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -169,7 +169,7 @@ int main( int argc, char **argv ) {
 		}
 
 		usleep( 100 * 1000 );
-		*/
+		
 
 		MPI_Barrier( MPI_COMM_WORLD );
 

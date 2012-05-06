@@ -31,8 +31,11 @@ int read_from_file( int total_tt, int **adjMtx, int *troopCounts, int* teamIDs, 
 	int bytes = bytes_per_line * tt_per_rank;
 	int entries = bytes / sizeof(int);
 
-	if(bytes * num_ranks != stats->st_size - HEADER_BYTES)
-		printf("WARNING: Size of adjacency matrix must be a multiple of -np\n");
+	if(bytes * num_ranks != stats->st_size - HEADER_BYTES) {
+		fprintf(stderr, "ERROR: Size of adjacency matrix must be a multiple of the number of ranks used!\n");
+		MPI_Finalize();
+		exit( EXIT_FAILURE );
+	}
 	
 	MPI_File mfile;
 	MPI_Status status;
