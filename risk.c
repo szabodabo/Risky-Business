@@ -21,6 +21,8 @@
 #define HIT_DICE 6
 #define HIT_ROLL_NORMAL 3
 #define HIT_ROLL_DEF 4
+#define DEFEND 0
+#define ATTACK 1
 
 #include "risk_input.h"
 
@@ -35,10 +37,12 @@ typedef enum answer_t {
 } ANSWER;
 
 typedef struct edge_result_t {
-	int terrA; //ID of territory A
-	int terrB; //ID of territory B
-	int troopsA; //Troops owned by A
-	int troopsB; //Troops owned by B
+	int myTerr; //ID of territory A
+	int otherTerr; //ID of territory B
+	int myTroops; //Troops owned by A
+	int otherTroops; //Troops owned by B
+	int myAction; //Attack or defend 
+	int otherAction; //Attack or defend
 } EDGE_RESULT;
 
 int diceRoll( int sides ) {
@@ -50,21 +54,38 @@ int diceRoll( int sides ) {
 EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
 {
 	EDGE_RESULT result;
-	result.terrA = terrA;
-	result.terrB = terrB;
-	result.troopsA = troopsA;
-	result.troopsB = troopsB;
+	result.myTerr = terrA;
+	result.otherTerr = terrB;
 
-	//If both are defending, nothing happens
-	if(troopsA < 0 && troopsB < 0)
-		return result;
+	int actionA = troopsA < 0 ? DEFEND : ATTACK;
+	int actionB = troopsB < 0 ? DEFEND : ATTACK;
 
-	//if the other team is defending, your hit chance decreases
-	int a_hit = troopsB < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
-	int b_hit = troopsA < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
-	
 	troopsA = abs(troopsA);
 	troopsB = abs(troopsB);
+
+	int r = troopsA - troopsB;
+	if(r < 0)
+	{
+		troopsA = 0;
+		troopsB = -r;
+	}
+	else
+	{
+		troopsA = r;
+		troopsB = 0;
+	}
+
+	result.myTroops = troopsA;
+	result.otherTroops = troopsB;
+	result.myAction = actionA;
+	result.otherAction = actionB;
+
+	//if(actionA == DEFEND && actionB == DEFEND)
+		return result;
+/*
+	//if the other team is defending, your hit chance decreases
+	int a_hit = actionB == DEFEND ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
+	int b_hit = actionA == DEFEND ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
 
 	int i;
 	int a_score = 0, b_score = 0;
@@ -83,10 +104,10 @@ EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
 	troopsA = troopsA < 0 ? 0 : troopsA;
 	troopsB = troopsB < 0 ? 0 : troopsB;
 
-	result.troopsA = troopsA;
-	result.troopsB = troopsB;
+	result.myTroops = troopsA;
+	result.otherTroops = troopsB;
 
-	return result;
+	return result;*/
 }
 
 void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
@@ -138,7 +159,7 @@ int main( int argc, char **argv ) {
 	int i, j, k;
 	int buffer_switch = 0;
 
-	srand( myRank * time(NULL) ); //BIG COMMENT
+	srand( myRank +99999 ); //BIG COMMENT
 
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
@@ -222,7 +243,7 @@ int main( int argc, char **argv ) {
 		apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 	}
 
- /*
+
 	//Graph printing
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -260,7 +281,6 @@ int main( int argc, char **argv ) {
 
 	sleep(2);
 
-	*/
 	MPI_Barrier( MPI_COMM_WORLD );
 
 	//printf("[%d] Beginning result exchange\n", myRank);
@@ -338,13 +358,14 @@ int main( int argc, char **argv ) {
 					if ( isMyJob ) {
 						int myNumTroops = edgeActivity[k][other_tt_num];
 						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
-						printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+					//	printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
+					//printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							//myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 						
-						EDGE_RESULT result = do_battle( myNumTroops, otherNumTroops );
+						EDGE_RESULT result = do_battle( my_tt_num, other_tt_num, myNumTroops, otherNumTroops );
+					//printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+					//	myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
 
-						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
 						edgeResults[ k ][ other_tt_num ] = result;
 					}
 				}
@@ -358,68 +379,126 @@ int main( int argc, char **argv ) {
 		buffer_switch = !buffer_switch;
 	}
 
-	//Now that all of the results have been computed, we need to pass around the final results.
+	//printf("[%d] HERE GOES FUCK ALL NOTHING\n", myRank);
+	MPI_Barrier(MPI_COMM_WORLD);
 
-	bzero( mpi_buffer[SEND], tt_total * tt_per_rank );
-	bzero( mpi_buffer[RECV], tt_total * tt_per_rank );
+	//Now that all of the edge results have been computed, we need to pass around potential occupation data.
+	statuses[SEND].MPI_SOURCE = myRank;
+	statuses[SEND].MPI_TAG = tt_offset;
 
-	//Put our slice of the edge results into the buffer
-	for ( j = 0; j < tt_per_rank; j++ ) {
-		memcpy( mpi_buffer[SEND] + j*tt_total, edgeResults[j], tt_total * sizeof(int) );
-	}
+	bzero( mpi_buffer[SEND], tt_total * tt_per_rank * sizeof(int) );
+	bzero( mpi_buffer[RECV], tt_total * tt_per_rank * sizeof(int) );
 
 	for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
 		//Post requests if we need to
-		if ( i < commSize - 1 ) {
-			MPI_Isend( mpi_buffer[SEND], tt_total * tt_per_rank, MPI_INT, NEXT_RANK_FROM(myRank), statuses[SEND].MPI_TAG, MPI_COMM_WORLD, &requests[SEND] );
+		//printf("[%d] GOIN AROUND FOR ITERATION %d\n", myRank, i);
+		//if ( i < commSize - 1 ) {
 			MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
-		}
-		//Work on data
-		//printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
+	//	}
+		//printf("DONE\n");
+		//iterate over slice we're given (report card for terr x)
+		//on diag, continue
+
+		//for spot [x][y]: check if current process has data for x
+		// - if so, check to see if there's data in edgeResults[x][y]
+		//    - anyone from terr [y] on border of [x]?
+
+		//for spot [x][y]: check if current process has data for y
+		// - if so, check for data in edgeResults[y][x]
 
 		int working_offset = statuses[SEND].MPI_TAG;
 
-		for ( j = 0; j < tt_per_rank; j++ ) { // J -> territories in currently received slice (rows of send buffer)
-			for ( k = 0; k < tt_per_rank; k++ ) { // K -> my territories (columns of send buffer, also rows of my data)
-				int my_tt_num = tt_offset + k;
-				int other_tt_num = working_offset + j;
+		int x; //representing the current report card we have
+		int y; //representing the territory the report card is asking about
 
-				if ( my_tt_num == other_tt_num ) { continue; } //Don't even consider the global diagonal
-				//Do these two even border?
-				if ( adjMatrix[ k ][ other_tt_num ] ) {
-					int sameFlip = coinFlips[my_tt_num] == coinFlips[other_tt_num];
-					int myNumLower = my_tt_num < other_tt_num;
-					int isMyJob = 0;
-					if (sameFlip) {
-						if (myNumLower) { isMyJob = 1; }
-					} else { //Different flips
-						if (!myNumLower) { isMyJob = 1; }
+		for(x = 0; x < tt_per_rank; x++) //for every report card we just recv'd...
+		{
+			for(y = 0; y < tt_total; y++) //for every territory the report card asks about...
+			{
+				int tt_card = x + working_offset;
+				int localy = y - tt_offset;
+
+				if(tt_card >= tt_offset && tt_card < tt_offset + tt_per_rank)
+				{
+					EDGE_RESULT e = edgeResults[x][y];
+				
+					//x = my
+					//y = other
+					if(e.myAction == DEFEND && e.otherAction == DEFEND)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += e.myTroops;
+						ACC(mpi_buffer[SEND], x, y) += 0;
 					}
+					else if(e.myAction == ATTACK && e.otherAction == ATTACK)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += 0;
+						ACC(mpi_buffer[SEND], x, y) += e.otherTroops;
+					}
+					else if(e.myAction == ATTACK)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += 0;
+						ACC(mpi_buffer[SEND], x, y) += 0;
+					}
+					else if(e.otherAction == ATTACK)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += e.myTroops;
+						ACC(mpi_buffer[SEND], x, y) += e.otherTroops;
+					}
+					
+				}
 
-					if ( isMyJob ) {
-						//Fill in the passed-around buffer (occupations) with the current occupation information
-						
-
-
-						int myNumTroops = edgeActivity[k][other_tt_num];
-						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
-						printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
-						
-						int result = do_battle( myNumTroops, otherNumTroops );
-						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
-						edgeResults[ k ][ other_tt_num ] = result;
+				if(y >= tt_offset && y < tt_offset + tt_per_rank)
+				{	
+					EDGE_RESULT e = edgeResults[localy][tt_card];;
+					
+					//x is other
+					//y is my
+					if(e.myAction == DEFEND && e.otherAction == DEFEND)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += e.otherTroops;
+						ACC(mpi_buffer[SEND], x, y) += 0;
+					}
+					else if(e.myAction == ATTACK && e.otherAction == ATTACK)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += 0;
+						ACC(mpi_buffer[SEND], x, y) += e.myTroops;
+					}
+					else if(e.otherAction == ATTACK)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += 0;
+						ACC(mpi_buffer[SEND], x, y) += 0;
+					}
+					else if(e.otherAction == DEFEND)
+					{
+						ACC(mpi_buffer[SEND], x, tt_card) += e.otherTroops;
+						ACC(mpi_buffer[SEND], x, y) += e.myTroops;
 					}
 				}
 			}
 		}
+		
+		//if ( i < commSize - 1 ) {
+			//Don't post a send until we're done filling in values
+			MPI_Isend( mpi_buffer[SEND], tt_total * tt_per_rank, MPI_INT, NEXT_RANK_FROM(myRank), statuses[SEND].MPI_TAG, MPI_COMM_WORLD, &requests[SEND] );
+	//	}
 
 		//Wait for requests
 		MPI_Waitall( 2, requests, statuses );
 
 		//Flip buffer switch
 		buffer_switch = !buffer_switch;
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	for(i = 0; i < tt_per_rank; i++)
+	{
+		printf("[%d] Border Data for %d: ", myRank, i + tt_offset);
+		for(j = 0; j < tt_total; j++)
+		{
+			printf("(%d): %d; ", j, ACC(mpi_buffer[SEND], i, j));
+		}
+		printf("\n");
 	}
 
 	MPI_Finalize();
