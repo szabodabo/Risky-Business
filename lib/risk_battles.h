@@ -29,19 +29,29 @@ void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs,
 		//don't need to attack my own team
 		neighborCount += ( adjList[i] == 1 ) && ( teamIDs[i] != teamIDs[territory] );
 	}
-	
-	//int remainder = myTroops % neighborCount;
-	//int troopsPerRival = (myTroops - remainder) / neighborCount;
-	//Can't we use integer division here?
-	int troopsPerRival = myTroops / neighborCount;
 
-	//Place troops on each edge, all attacking.
+	if ( neighborCount == 0 ) {
+		return;
+	}
+
+	int troopsPerRival = myTroops / neighborCount;
+	int remainder = myTroops % neighborCount;
+	int troopsToPlace;
+
 	for( i = 0; i < tt_total; i++ ) {
+		troopsToPlace = troopsPerRival;
+		printf("[T%d] Troops Per Rival: %d; MyTroops: %d, Neighbors: %d; remainder: %d\n", 
+			territory, troopsPerRival, myTroops, neighborCount, remainder);
+		
 		if( adjList[i] == 1 && teamIDs[i] != teamIDs[territory] ) {
+			if (remainder > 0) {
+				troopsToPlace += remainder;
+				remainder = 0;
+			}
 			if (diceRoll(2) == 1) {
-				ASSIGN_ATTACK(outboundEdge[i], troopsPerRival);
+				ASSIGN_ATTACK(outboundEdge[i], troopsToPlace);
 			} else {
-				ASSIGN_DEFENSE(outboundEdge[i], troopsPerRival);
+				ASSIGN_DEFENSE(outboundEdge[i], troopsToPlace);
 			}
 		}
 	}
