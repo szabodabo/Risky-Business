@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include <math.h>
 #include "mpi.h"
@@ -127,12 +128,12 @@ int main( int argc, char **argv ) {
 		//Graph printing
 
 		MPI_Barrier(MPI_COMM_WORLD);
-		sleep(1);
+		usleep(100 * 1000);
 		if (myRank == 0) {
 			printf("graph G {\n");
 		}
 
-		sleep(myRank + 1);
+		usleep(myRank * 100 * 1000);
 		for ( i = 0; i < tt_per_rank; i++ ) {
 			int territoryID = tt_offset + i;
 			//printf("Territory %d owned by Rank %d\n", territoryID, myRank);
@@ -153,13 +154,12 @@ int main( int argc, char **argv ) {
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
-		sleep(1);
+		usleep(100 * 1000);
 		if (myRank == 0) {
 			printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
 		}
 
-
-		sleep(2);
+		usleep( 100 * 1000 );
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
