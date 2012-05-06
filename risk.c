@@ -30,6 +30,13 @@ typedef enum answer_t {
 	YES, NO
 } ANSWER;
 
+typedef struct edge_result_t {
+	int terrA; //ID of territory A
+	int terrB; //ID of territory B
+	int troopsA; //Troops owned by A
+	int troopsB; //Troops owned by B
+} EDGE_RESULT;
+
 int diceRoll( int sides ) {
 	int randInt = rand() % sides;
 	//printf("DiceRoll: %d\n", randInt+1);
@@ -95,15 +102,15 @@ int main( int argc, char **argv ) {
 
 	srand( myRank * time(NULL) ); //BIG COMMENT
 
-	//Everyone has each of these arrays in FULL
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
 	int *coinFlips; //Used to determine who is doing what calculation each round
 
 	//Everyone has their own slice of these arrays
 	int **adjMatrix; //Adjacency matrix
-	int **edgeActivity; //Edge data (passed around)
-	int **edgeResults;
+	int **edgeActivity; //Edge troop assignment data (passed around)
+	EDGE_RESULT **edgeResults; //What was the result of the conflict between my territories and other territories?
+	int **occupations; //How many troops from team [COL] are on the border of team [ROW]?
 
 	MPI_Status *statuses;
 	MPI_Request *requests;
@@ -133,12 +140,12 @@ int main( int argc, char **argv ) {
 
 	adjMatrix = calloc( tt_per_rank, sizeof(int *) );
 	edgeActivity = calloc( tt_per_rank, sizeof(int *) );
-	edgeResults = calloc( tt_per_rank, sizeof(int *) );
+	edgeResults = calloc( tt_per_rank, sizeof(EDGE_RESULT *) );
 
 	for (i = 0; i < tt_per_rank; i++) {
 		adjMatrix[i] = calloc( tt_total, sizeof(int) );
 		edgeActivity[i] = calloc( tt_total, sizeof(int) );
-		edgeResults[i] = calloc( tt_total, sizeof(int) ); 
+		edgeResults[i] = calloc( tt_total, sizeof(EDGE_RESULT) ); 
 	}
 
 	//Create memory for our MPI Requests/Statuses
@@ -229,8 +236,6 @@ int main( int argc, char **argv ) {
 		memcpy( mpi_buffer[SEND] + j*tt_total, edgeActivity[j], tt_total * sizeof(int) );
 	}
 
-	//printf("[%d] RecvBuffer Populated!\n", myRank);
-
 	//Hot potato should: 
 
 	// - Post SEND & RECV requests
@@ -299,6 +304,67 @@ int main( int argc, char **argv ) {
 						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
 							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 						
+						EDGE_RESULT result = do_battle( myNumTroops, otherNumTroops );
+
+						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
+						edgeResults[ k ][ other_tt_num ] = result;
+					}
+				}
+			}
+		}
+
+		//Wait for requests
+		MPI_Waitall( 2, requests, statuses );
+
+		//Flip buffer switch
+		buffer_switch = !buffer_switch;
+	}
+
+	//Now that all of the results have been computed, we need to pass around the final results.
+
+	bzero( mpi_buffer[SEND], tt_total * tt_per_rank );
+	bzero( mpi_buffer[RECV], tt_total * tt_per_rank );
+
+	//Put our slice of the edge results into the buffer
+	for ( j = 0; j < tt_per_rank; j++ ) {
+		memcpy( mpi_buffer[SEND] + j*tt_total, edgeResults[j], tt_total * sizeof(int) );
+	}
+
+	for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
+		//Post requests if we need to
+		if ( i < commSize - 1 ) {
+			MPI_Isend( mpi_buffer[SEND], tt_total * tt_per_rank, MPI_INT, NEXT_RANK_FROM(myRank), statuses[SEND].MPI_TAG, MPI_COMM_WORLD, &requests[SEND] );
+			MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
+		}
+		//Work on data
+		//printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
+
+		int working_offset = statuses[SEND].MPI_TAG;
+
+		for ( j = 0; j < tt_per_rank; j++ ) { // J -> territories in currently received slice (rows of send buffer)
+			for ( k = 0; k < tt_per_rank; k++ ) { // K -> my territories (columns of send buffer, also rows of my data)
+				int my_tt_num = tt_offset + k;
+				int other_tt_num = working_offset + j;
+
+				if ( my_tt_num == other_tt_num ) { continue; } //Don't even consider the global diagonal
+				//Do these two even border?
+				if ( adjMatrix[ k ][ other_tt_num ] ) {
+					int sameFlip = coinFlips[my_tt_num] == coinFlips[other_tt_num];
+					int myNumLower = my_tt_num < other_tt_num;
+					int isMyJob = 0;
+					if (sameFlip) {
+						if (myNumLower) { isMyJob = 1; }
+					} else { //Different flips
+						if (!myNumLower) { isMyJob = 1; }
+					}
+
+					if ( isMyJob ) {
+						int myNumTroops = edgeActivity[k][other_tt_num];
+						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
+						printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
+						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+						
 						int result = do_battle( myNumTroops, otherNumTroops );
 						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
 						edgeResults[ k ][ other_tt_num ] = result;
@@ -313,7 +379,7 @@ int main( int argc, char **argv ) {
 		//Flip buffer switch
 		buffer_switch = !buffer_switch;
 	}
-	
+
 	MPI_Finalize();
 	return EXIT_SUCCESS;
 }
