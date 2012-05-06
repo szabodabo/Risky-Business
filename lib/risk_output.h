@@ -40,19 +40,20 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**a
 	int offset = (ints_per_rank * rank + 1) * sizeof(int); //the extra 1 is the file header int
 	int* buffer = calloc(ints_per_rank, sizeof(int));
 
+	int tt_offset = rank * tt_per_rank;
 	int i, j;
 	for(i = 0; i < tt_per_rank; i++)
 	{
 		int buf_offset = ints_per_tt * i;
-		buffer[buf_offset + 0] = i;
-		buffer[buf_offset + 1] = troopCounts[i];
-		buffer[buf_offset + 2] = teamIDs[i];
+		buffer[buf_offset++] = tt_offset + i;
+		buffer[buf_offset++] = troopCounts[tt_offset + i];
+		buffer[buf_offset++] = teamIDs[tt_offset + i];
 
 		for(j = 0; j < tt_total; j++)
 		{
-			buffer[++buf_offset] = adjMatrix[i][j];
-			buffer[++buf_offset] = abs(edgeActivity[i][j]);
-			buffer[++buf_offset] = edgeActivity[i][j] < 0;
+			buffer[buf_offset++] = adjMatrix[i][j];
+			buffer[buf_offset++] = abs(edgeActivity[i][j]);
+			buffer[buf_offset++] = edgeActivity[i][j] < 0;
 		}
 	}
 

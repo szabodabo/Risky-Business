@@ -44,13 +44,16 @@ int main( int argc, char **argv ) {
 			fread( &border, sizeof(int), 1, file );
 			fread( &numTroopsOnEdge, sizeof(int), 1, file );
 			fread( &action, sizeof(int), 1, file );
-			//"9{9} (0)" -- "0{0} (273)" [taillabel = "0" fontcolor = "blue"]
-			if ( action == 0 ) {
-				printf("\"\t\t%d -- %d [taillabel = \"%d\" fontcolor = \"blue\"]\n",
-					i, j, numTroopsOnEdge);
-			} else {
-				printf("\"\t\t%d -- %d [taillabel = \"%d\" fontcolor = \"red\"]\n",
-					i, j, numTroopsOnEdge);			
+
+			if ( border == 1 ) {
+				//"9{9} (0)" -- "0{0} (273)" [taillabel = "0" fontcolor = "blue"]
+				if ( action == 0 ) {
+					printf("\t\t%d -- %d [taillabel = \"%d\" fontcolor = \"blue\"]\n",
+						i, j, numTroopsOnEdge);
+				} else {
+					printf("\t\t%d -- %d [taillabel = \"%d\" fontcolor = \"red\"]\n",
+						i, j, numTroopsOnEdge);			
+				}
 			}
 		}
 	}
