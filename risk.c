@@ -18,9 +18,6 @@
 #define ACC(A, R, C) A[tt_total * R + C]
 #define DEBUG() //printf("[%d] DEBUG %d\n", myRank, debug_num++);
 
-#define HIT_DICE 6
-#define HIT_ROLL_NORMAL 3
-#define HIT_ROLL_DEF 4
 #define DEFEND 0
 #define ATTACK 1
 
@@ -54,6 +51,7 @@ int diceRoll( int sides ) {
 EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
 {
 	EDGE_RESULT result;
+
 	result.myTerr = terrA;
 	result.otherTerr = terrB;
 
@@ -63,51 +61,37 @@ EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
 	troopsA = abs(troopsA);
 	troopsB = abs(troopsB);
 
-	int r = troopsA - troopsB;
-	if(r < 0)
-	{
-		troopsA = 0;
-		troopsB = -r;
-	}
-	else
-	{
-		troopsA = r;
-		troopsB = 0;
-	}
-
-	result.myTroops = troopsA;
-	result.otherTroops = troopsB;
 	result.myAction = actionA;
 	result.otherAction = actionB;
 
-	//if(actionA == DEFEND && actionB == DEFEND)
-		return result;
-/*
-	//if the other team is defending, your hit chance decreases
-	int a_hit = actionB == DEFEND ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
-	int b_hit = actionA == DEFEND ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
-
-	int i;
-	int a_score = 0, b_score = 0;
-
-	while(troopsA > 0 && troopsB > 0)
+	if(actionA == DEFEND && actionB == DEFEND)
 	{
-		for(i = 0; i < troopsA; i++)
-			a_score += diceRoll(HIT_DICE) > a_hit;
-		for(i = 0; i < troopsB; i++)
-			b_score += diceRoll(HIT_DICE) > b_hit;
-
-		troopsA -= a_score;
-		troopsB -= b_score;
+		//Do nothing --> left here in case we want to do something later
 	}
+	else
+	{
+		int i;
+		int a_score = 0, b_score = 0;
 
-	troopsA = troopsA < 0 ? 0 : troopsA;
-	troopsB = troopsB < 0 ? 0 : troopsB;
+		while(troopsA > 0 && troopsB > 0)
+		{
+			for(i = 0; i < troopsA; i++)
+				a_score += rand() % 2 + (actionA == DEFEND) * (rand() % 2);
+			for(i = 0; i < troopsB; i++)
+				b_score += rand() % 2 + (actionB == DEFEND) * (rand() % 2);
+
+			troopsA -= a_score;
+			troopsB -= b_score;
+		}
+
+		troopsA = troopsA < 0 ? 0 : troopsA;
+		troopsB = troopsB < 0 ? 0 : troopsB;
+	}
 
 	result.myTroops = troopsA;
 	result.otherTroops = troopsB;
 
-	return result;*/
+	return result;
 }
 
 void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
@@ -359,12 +343,12 @@ int main( int argc, char **argv ) {
 						int myNumTroops = edgeActivity[k][other_tt_num];
 						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
 					//	printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-					//printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-							//myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+					printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 						
 						EDGE_RESULT result = do_battle( my_tt_num, other_tt_num, myNumTroops, otherNumTroops );
-					//printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-					//	myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
+					printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+						myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
 
 						edgeResults[ k ][ other_tt_num ] = result;
 					}
