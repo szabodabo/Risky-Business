@@ -124,7 +124,7 @@ int main( int argc, char **argv ) {
 			apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 		}
 
-
+		/*
 		//Graph printing
 
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -160,6 +160,7 @@ int main( int argc, char **argv ) {
 		}
 
 		usleep( 100 * 1000 );
+		*/
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
@@ -434,15 +435,52 @@ int main( int argc, char **argv ) {
 		*/
 		MPI_Barrier( MPI_COMM_WORLD );
 
-		//If one team has won, stop the game.
+		//If one team controls all territories, stop the game.
 		loopCondition = 0;
 		int curTeam = teamIDs[0];
+
 		for ( i = 1; i < tt_total; i++ ) {
 			if ( curTeam != teamIDs[i] ) { 
 				loopCondition = 1;
 				break; 
 			}
 		}
+
+		if ( loopCondition == 0 ) {
+			if ( myRank == 0 ) {
+				sleep(1);
+				printf("GAME OVER: Team %d wins.\n", curTeam);
+			}
+		}
+
+
+
+		if ( loopCondition == 1 ) { //If already chose to end the game, we don't need to do this.
+
+			loopCondition = 0;
+
+			//If only one team has troops remaining, stop the game.
+			int teamsWithTroops = 0;
+			int lastTeam = -1;
+
+			for ( i = 0; i < tt_total; i++ ) {
+				if ( troopCounts[i] > 0 && teamIDs[i] != lastTeam ) {
+					lastTeam = teamIDs[i];
+					teamsWithTroops++;
+				}
+				if ( teamsWithTroops > 1 ) {
+					loopCondition = 1;
+					break;
+				}
+			} //If we fell through, that means the game's over.
+			if ( loopCondition == 0 ) {
+				if ( myRank == 0 ) {
+					sleep(1);
+					printf("GAME OVER: Team %d wins.\n", lastTeam);
+				}
+			}
+		}
+
 	}
 
 	MPI_Finalize();
