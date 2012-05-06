@@ -1,3 +1,6 @@
+#ifndef RISK_INPUT_H
+#define RISK_INPUT_H
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -6,8 +9,7 @@
 #include <unistd.h>
 #include "mpi.h"
 
-#define INPUT_BINARY "graphbin"
-#define HEADER_BYTES 4
+#include "risk_macros.h"
 
 void read_header_info( int *total_tt )
 {
@@ -60,3 +62,5 @@ int read_from_file( int total_tt, int **adjMtx, int *troopCounts, int* teamIDs, 
 
 	return rank * tt_per_rank;
 }
+
+#endif

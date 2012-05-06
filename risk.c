@@ -4,102 +4,10 @@
 #include <time.h>
 #include <math.h>
 #include "mpi.h"
-
-#define ASSIGN_ATTACK(E, NUM) (E = NUM)
-#define ASSIGN_DEFENSE(E, NUM) (E = (-1) * NUM)
-#define I_HAVE(TERR) (TERR > tt_offset && TERR < (tt_offset + tt_per_rank))
-#define NEXT_RANK_FROM(R) (R+1 == commSize ? 0 : R+1)
-#define PREV_RANK_FROM(R) ((R == 0) ? commSize-1 : R-1)
-#define RECV buffer_switch
-#define SEND !buffer_switch
-#define HEADS 1 //..okayface.jpg
-#define TAILS 2
-#define COIN_FLIP 2
-#define ACC(A, R, C) A[tt_total * R + C]
-#define DEBUG() //printf("[%d] DEBUG %d\n", myRank, debug_num++);
-
-#define DEFEND 0
-#define ATTACK 1
-
+#include "risk_macros.h"
+#include "risk_chance.h"
 #include "risk_input.h"
-
-int tt_per_rank = 0; //Number of territories per MPI Rank
-int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
-int tt_total = 0; //Total number of territories being warred
-
-int debug_num = 0;
-
-typedef enum answer_t {
-	YES, NO
-} ANSWER;
-
-typedef struct edge_result_t {
-	int myTerr; //ID of territory A
-	int otherTerr; //ID of territory B
-	int myTroops; //Troops owned by A
-	int otherTroops; //Troops owned by B
-	int myAction; //Attack or defend 
-	int otherAction; //Attack or defend
-} EDGE_RESULT;
-
-int diceRoll( int sides ) {
-	int randInt = rand() % sides;
-	return randInt + 1;
-}
-
-//If either argument is negative, that team is defending
-EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
-{
-	EDGE_RESULT result;
-
-	result.myTerr = terrA;
-	result.otherTerr = terrB;
-
-	int actionA = troopsA < 0 ? DEFEND : ATTACK;
-	int actionB = troopsB < 0 ? DEFEND : ATTACK;
-
-	troopsA = abs(troopsA);
-	troopsB = abs(troopsB);
-
-	result.myAction = actionA;
-	result.otherAction = actionB;
-
-	if(actionA == DEFEND && actionB == DEFEND)
-	{
-		//Do nothing --> left here in case we want to do something later
-	}
-	else
-	{
-		int i;
-		int a_score = 0, b_score = 0;
-
-		while(troopsA > 0 && troopsB > 0)
-		{
-			for(i = 0; i < troopsA; i++)
-				a_score += rand() % 2 + (actionA == DEFEND) * (rand() % 2);
-			for(i = 0; i < troopsB; i++)
-				b_score += rand() % 2 + (actionB == DEFEND) * (rand() % 2);
-
-			troopsA -= a_score;
-			troopsB -= b_score;
-		}
-
-		troopsA = troopsA < 0 ? 0 : troopsA;
-		troopsB = troopsB < 0 ? 0 : troopsB;
-	}
-
-	result.myTroops = troopsA;
-	result.otherTroops = troopsB;
-
-	return result;
-}
-
-void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
-	int i;
-	for ( i = 0; i < tt_per_rank; i++ ) {
-		coinFlips[tt_offset+i] = diceRoll(COIN_FLIP);
-	}
-}
+#include "risk_battles.h"
 
 //GIANT IDEA:
 //Rule change --> it is totally legal to not leave any troops in your home node. If all troops from a node
@@ -107,41 +15,16 @@ void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips
 //every phase and it will get conquered pretty damn fast (battle resolution should report no troops lost if a team
 //fights an army with 0 troops)
 
-//Apply the strategy for team <teamID> on country <territory> by looking at the troop counts and controlling teams for 
-//each node on the map. Use the adjacency matrix to figure out our neighbors.  Place results in edgeActivity
-void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs, int *adjList, int *outboundEdge)
-{
-	//simple strategy to test and debug with - split troops evenly on all edges, all attacking
-	//if there is a remainder of troops, don't do anything with them
-	int myTroops = troopCounts[territory];
-	int neighborCount = 0;
-	int i;
-	for( i = 0; i < tt_total; i++ ) {
-		//don't need to attack my own team
-		neighborCount += ( adjList[i] == 1 ) && ( teamIDs[i] != teamIDs[territory] );
-	}
-	
-	//int remainder = myTroops % neighborCount;
-	//int troopsPerRival = (myTroops - remainder) / neighborCount;
-	//Can't we use integer division here?
-	int troopsPerRival = myTroops / neighborCount;
 
-	//Place troops on each edge, all attacking.
-	for( i = 0; i < tt_total; i++ ) {
-		if( adjList[i] == 1 && teamIDs[i] != teamIDs[territory] ) {
-			if (diceRoll(2) == 1) {
-				ASSIGN_ATTACK(outboundEdge[i], troopsPerRival);
-			} else {
-				ASSIGN_DEFENSE(outboundEdge[i], troopsPerRival);
-			}
-		}
-	}
-}
 
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i, j, k;
 	int buffer_switch = 0;
+
+	int tt_per_rank = 0; //Number of territories per MPI Rank
+	int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
+	int tt_total = 0; //Total number of territories being warred
 
 	srand( myRank +99999 ); //BIG COMMENT
 
