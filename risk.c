@@ -12,11 +12,15 @@
 #define PREV_RANK_FROM(R) ((R == 0) ? commSize-1 : R-1)
 #define RECV buffer_switch
 #define SEND !buffer_switch
-#define HEADS 1
+#define HEADS 1 //..okay
 #define TAILS 2
 #define COIN_FLIP 2
 #define ACC(A, R, C) A[tt_total * R + C]
 #define DEBUG() //printf("[%d] DEBUG %d\n", myRank, debug_num++);
+
+#define HIT_DICE 6
+#define HIT_ROLL_NORMAL 3
+#define HIT_ROLL_DEF 4
 
 #include "risk_input.h"
 
@@ -32,16 +36,42 @@ typedef enum answer_t {
 
 int diceRoll( int sides ) {
 	int randInt = rand() % sides;
-	//printf("DiceRoll: %d\n", randInt+1);
 	return randInt + 1;
 }
 
-int do_battle(int teamA, int teamB)
+//If either argument is negative, that team is defending
+int* do_battle(int teamA, int teamB)
 {
-	int a_roll = rand() % (teamA + 1); // 0 to 5
-	int b_roll = rand() % (teamB + 1); // 0 to 4
+	int* results = calloc(2, sizeof(int));
+
+	//if the other team is defending, your hit chance decreases
+	int a_hit = teamB < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
+	int b_hit = teamA < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
 	
-	return a_roll - b_roll;
+	teamA = abs(teamA);
+	teamB = abs(teamB);
+
+	int i;
+	int a_score = 0, b_score = 0;
+
+	while(teamA > 0 && teamB > 0)
+	{
+		for(i = 0; i < teamA; i++)
+			a_score += rand() % HIT_DICE
+		for(i = 0; i < teamB; i++)
+			b_score += rand() % 2 + (b_def * DEF_BONUS) * rand() % 2;
+
+		teamA -= a_score;
+		teamB -= b_score;
+	}
+
+	teamA = teamA < 0 ? 0 : teamA;
+	teamB = teamB < 0 ? 0 : teamB;
+
+	results[0] = teamA;
+	results[1] = teamB;
+
+	return results;
 }
 
 void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
@@ -299,9 +329,9 @@ int main( int argc, char **argv ) {
 						printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
 							myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 						
-						int result = do_battle( myNumTroops, otherNumTroops );
-						//If result is positive, territory K won the conflict; otherwise, other_tt_num won.
-						edgeResults[ k ][ other_tt_num ] = result;
+						int* result = do_battle( myNumTroops, otherNumTroops );
+						printf("[%d] Results: #%d has %d, #%d has %d\n", myRank, my_tt_num, result[0], other_tt_num, result[1]);
+						//edgeResults[ k ][ other_tt_num ] = result;
 					}
 				}
 			}
