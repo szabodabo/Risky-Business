@@ -7,7 +7,7 @@ bluegene: clean
 	$(BG_COMPILE) extras/to_graphviz.c -o bin/to_graphviz
 kratos: 
 	$(KR_COMPILE) risk.c -o bin/risk
-	$(KR_COMPILE) extras/to_graphviz.c -o bin/to_graphviz
+	$(KR_COMPILE) extras/generator.c -o bin/gen
 clean:
 	rm -f stdout*
 	rm -f stderr*

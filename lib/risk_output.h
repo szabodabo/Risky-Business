@@ -15,7 +15,7 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**a
 	while(r > 0)
 	{
 		digits++;
-		round_num /= 10;
+		r /= 10;
 	}
 
 	char* graphout = malloc(12 + digits);
@@ -23,7 +23,8 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**a
 
 	MPI_File mfile;
 	MPI_Status status;
-	MPI_File_open(MPI_COMM_WORLD, graphout, MPI_MODE_CREATE, MPI_INFO_NULL, &mfile);
+	
+	MPI_File_open(MPI_COMM_WORLD, graphout, MPI_MODE_CREATE | MPI_MODE_RDWR, MPI_INFO_NULL, &mfile);
 
 	int tt_total = num_ranks * tt_per_rank;
 	int ints_per_tt 	= 3 + (tt_total * 3);
