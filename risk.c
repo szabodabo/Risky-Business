@@ -11,6 +11,7 @@
 #include "lib/risk_chance.h"
 #include "lib/risk_input.h"
 #include "lib/risk_battles.h"
+#include "lib/risk_output.h"
 
 //GIANT IDEA:
 //Rule change --> it is totally legal to not leave any troops in your home node. If all troops from a node
@@ -137,6 +138,10 @@ int main( int argc, char **argv ) {
 		//Graph printing
 
 		MPI_Barrier(MPI_COMM_WORLD);
+
+		print_graph(num_iterations, myRank, commSize, tt_per_rank, 
+			adjMatrix, edgeActivity, troopCounts, teamIDs);
+
 		usleep(100 * 1000);
 		if (myRank == 0) {
 			printf("graph G {\n");
