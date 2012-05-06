@@ -64,9 +64,9 @@ int* do_battle(int teamA, int teamB)
 	while(teamA > 0 && teamB > 0)
 	{
 		for(i = 0; i < teamA; i++)
-			a_score += rand() % HIT_DICE;
+			a_score += diceRoll(HIT_DICE) > a_hit;
 		for(i = 0; i < teamB; i++)
-			b_score += rand() % 2 + (b_def * DEF_BONUS) * rand() % 2;
+			b_score += diceRoll(HIT_DICE) > b_hit;
 
 		teamA -= a_score;
 		teamB -= b_score;
