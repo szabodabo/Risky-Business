@@ -16,7 +16,6 @@
 //fights an army with 0 troops)
 
 
-
 int main( int argc, char **argv ) {
 	int myRank, commSize;
 	int i, j, k;
