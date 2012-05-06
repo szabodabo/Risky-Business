@@ -13,7 +13,7 @@ clean:
 	rm -f stdout*
 	rm -f stderr*
 	rm -f core.*
-	rm -f risk
-	rm -f gen
-	rm -f rand
-
+	rm -f bin/*
+	rm -f graphs/graphviz/png/*.png
+	rm -f graphs/graphviz/*.gv
+	rm -f graphs/graphout*
