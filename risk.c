@@ -25,7 +25,7 @@ int main( int argc, char **argv ) {
 	int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
 	int tt_total = 0; //Total number of territories being warred
 
-	srand( myRank +99999 ); //BIG COMMENT
+	srand( myRank + time(NULL) ); //BIG COMMENT
 
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
@@ -366,6 +366,8 @@ int main( int argc, char **argv ) {
 		bzero( troopCounts_temp, tt_total * sizeof(int) );
 		bzero( coinFlips_temp, tt_total * sizeof(int) );
 
+		//Resolve inter-node conflicts
+
 		for ( i = 0; i < tt_per_rank; i++ ) { // i -> my territory
 			//For now, just find the max number in here and call the owner the winner.
 			int maxNum = 0; int maxOwner = i+tt_offset;
@@ -380,7 +382,23 @@ int main( int argc, char **argv ) {
 			troopCounts_temp[tt_offset+i] = maxNum; 
 		}
 
+		//Do coin flips
 		do_my_coin_flips(myRank, tt_per_rank, tt_offset, coinFlips_temp);
+
+		//Troop movement?
+
+		//If I'm bordered only by neighbors on my team, give my neighbors my troops.
+		//The problem with this is that if a friendly neighbor gets taken over, I'm now screwed.
+		//We can look at the teamIDs to find out who the neighbors are and send accordingly,
+		// but this will require a second allreduce (first allreduce provides teams, so we'd have to wait)
+
+		//Reinforcements: Let's give a 20% boost to each territory's troop count
+		for ( i = 0; i < tt_per_rank; i++ ) {  // i -> for each of my territories
+			int troops = troopCounts_temp[ tt_offset+i ];
+			troops = (double) troops * 1.20;
+			troopCounts_temp[ tt_offset+i ] = troops;
+		}
+
 		MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 		MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 		MPI_Allreduce( coinFlips_temp, coinFlips, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
@@ -416,8 +434,6 @@ int main( int argc, char **argv ) {
 		*/
 		MPI_Barrier( MPI_COMM_WORLD );
 
-		printf("Running loop condition check\n");
-
 		//If one team has won, stop the game.
 		loopCondition = 0;
 		int curTeam = teamIDs[0];
@@ -427,8 +443,6 @@ int main( int argc, char **argv ) {
 				break; 
 			}
 		}
-		printf("Done loop condition check\n");
-
 	}
 
 	MPI_Finalize();
