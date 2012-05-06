@@ -3,12 +3,10 @@ KR_COMPILE = mpicc -Wall -g -I.
 
 bluegene: clean
 	$(BG_COMPILE) risk.c -o risk
-	$(BG_COMPILE) generator.c -o gen
-	$(BG_COMPILE) random.c -o rand -lm
+	$(BG_COMPILE) extras/generator.c -o bin/gen
 kratos: 
-	$(KR_COMPILE) risk.c -o risk
-	$(KR_COMPILE) generator.c -o gen
-	$(KR_COMPILE) random.c -o rand -lm
+	$(KR_COMPILE) risk.c -o bin/risk
+	$(KR_COMPILE) extras/generator.c -o bin/gen
 clean:
 	rm -f stdout*
 	rm -f stderr*
