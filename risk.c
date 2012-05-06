@@ -120,7 +120,7 @@ int main( int argc, char **argv ) {
 
 	while ( loopCondition == 1 ) {
 
-		printf("Top of loop!\n");
+		//printf("Top of loop!\n");
 		num_iterations++;
 
 		for ( i = 0; i < tt_per_rank; i++ ) {
@@ -141,40 +141,6 @@ int main( int argc, char **argv ) {
 
 		print_graph(num_iterations, myRank, commSize, tt_per_rank, 
 			adjMatrix, edgeActivity, troopCounts, teamIDs);
-
-		usleep(100 * 1000);
-		if (myRank == 0) {
-			printf("graph G {\n");
-		}
-
-		usleep(myRank * 100 * 1000);
-		for ( i = 0; i < tt_per_rank; i++ ) {
-			int territoryID = tt_offset + i;
-			//printf("Territory %d owned by Rank %d\n", territoryID, myRank);
-			//printf("Territories bordered by territory %d:\n", territoryID);
-			for ( j = 0; j < tt_total; j++ ) {
-				if ( adjMatrix[i][j] == 1 ) {
-					printf("\t\"%d{%d} (%d)\" -- \"%d{%d} (%d)\"", territoryID, teamIDs[territoryID], troopCounts[territoryID], j, teamIDs[j], troopCounts[j]);
-					int numToPrint = edgeActivity[i][j];
-					int posFlag = (numToPrint > 0);
-					if (posFlag == 1) {
-						printf(" [taillabel = \"%d\" fontcolor = \"red\"]\n", numToPrint);
-					} else {
-						numToPrint *= -1;
-						printf(" [taillabel = \"%d\" fontcolor = \"blue\"]\n", numToPrint);
-					}
-				}
-			}
-		}
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		usleep(100 * 1000);
-		if (myRank == 0) {
-			printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
-		}
-
-		usleep( 100 * 1000 );
-		
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
@@ -254,12 +220,12 @@ int main( int argc, char **argv ) {
 							int myNumTroops = edgeActivity[k][other_tt_num];
 							int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
 							//	printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-							printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-								myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+							//printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							//	myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 							
 							EDGE_RESULT result = do_battle( my_tt_num, other_tt_num, myNumTroops, otherNumTroops );
-							printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-								myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
+							//printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							//	myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
 
 							edgeResults[ k ][ other_tt_num ] = result;
 						}
@@ -368,6 +334,7 @@ int main( int argc, char **argv ) {
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
+		/*
 		for ( i = 0; i < tt_per_rank; i++ ) {
 			printf("[%d] Border Data for %d: ", myRank, i + tt_offset);
 			for(j = 0; j < tt_total; j++)
@@ -376,6 +343,7 @@ int main( int argc, char **argv ) {
 			}
 			printf("\n");
 		}
+		*/
 
 		bzero( teamIDs_temp, tt_total * sizeof(int) );
 		bzero( troopCounts_temp, tt_total * sizeof(int) );
@@ -462,7 +430,7 @@ int main( int argc, char **argv ) {
 
 		if ( loopCondition == 0 ) {
 			if ( myRank == 0 ) {
-				sleep(1);
+				//sleep(1);
 				printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
 			}
 		}
@@ -489,7 +457,7 @@ int main( int argc, char **argv ) {
 			} //If we fell through, that means the game's over.
 			if ( loopCondition == 0 ) {
 				if ( myRank == 0 ) {
-					sleep(1);
+					//sleep(1);
 					printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
 				}
 			}
@@ -497,7 +465,7 @@ int main( int argc, char **argv ) {
 		if ( loopCondition == 1 && num_iterations >= max_iterations ) {
 			loopCondition = 0;
 			if ( myRank == 0 ) {
-				sleep(1);
+				//sleep(1);
 				printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
 			}
 		}

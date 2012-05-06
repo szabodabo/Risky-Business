@@ -40,8 +40,8 @@ void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs,
 
 	for( i = 0; i < tt_total; i++ ) {
 		troopsToPlace = troopsPerRival;
-		printf("[T%d] Troops Per Rival: %d; MyTroops: %d, Neighbors: %d; remainder: %d\n", 
-			territory, troopsPerRival, myTroops, neighborCount, remainder);
+		//printf("[T%d] Troops Per Rival: %d; MyTroops: %d, Neighbors: %d; remainder: %d\n", 
+		//	territory, troopsPerRival, myTroops, neighborCount, remainder);
 		
 		if( adjList[i] == 1 && teamIDs[i] != teamIDs[territory] ) {
 			if (remainder > 0) {
