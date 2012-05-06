@@ -47,38 +47,46 @@ int diceRoll( int sides ) {
 }
 
 //If either argument is negative, that team is defending
-int* do_battle(int teamA, int teamB)
+EDGE_RESULT do_battle(int terrA, int terrB, int troopsA, int troopsB)
 {
-	int* results = calloc(2, sizeof(int));
+	EDGE_RESULT result;
+	result.terrA = terrA;
+	result.terrB = terrB;
+	result.troopsA = troopsA;
+	result.troopsB = troopsB;
+
+	//If both are defending, nothing happens
+	if(troopsA < 0 && troopsB < 0)
+		return result;
 
 	//if the other team is defending, your hit chance decreases
-	int a_hit = teamB < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
-	int b_hit = teamA < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
+	int a_hit = troopsB < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
+	int b_hit = troopsA < 0 ? HIT_ROLL_DEF : HIT_ROLL_NORMAL;
 	
-	teamA = abs(teamA);
-	teamB = abs(teamB);
+	troopsA = abs(troopsA);
+	troopsB = abs(troopsB);
 
 	int i;
 	int a_score = 0, b_score = 0;
 
-	while(teamA > 0 && teamB > 0)
+	while(troopsA > 0 && troopsB > 0)
 	{
-		for(i = 0; i < teamA; i++)
+		for(i = 0; i < troopsA; i++)
 			a_score += diceRoll(HIT_DICE) > a_hit;
-		for(i = 0; i < teamB; i++)
+		for(i = 0; i < troopsB; i++)
 			b_score += diceRoll(HIT_DICE) > b_hit;
 
-		teamA -= a_score;
-		teamB -= b_score;
+		troopsA -= a_score;
+		troopsB -= b_score;
 	}
 
-	teamA = teamA < 0 ? 0 : teamA;
-	teamB = teamB < 0 ? 0 : teamB;
+	troopsA = troopsA < 0 ? 0 : troopsA;
+	troopsB = troopsB < 0 ? 0 : troopsB;
 
-	results[0] = teamA;
-	results[1] = teamB;
+	result.troopsA = troopsA;
+	result.troopsB = troopsB;
 
-	return results;
+	return result;
 }
 
 void do_my_coin_flips(int myRank, int tt_per_rank, int tt_offset, int *coinFlips) {
