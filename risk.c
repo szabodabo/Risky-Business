@@ -12,7 +12,7 @@
 #define PREV_RANK_FROM(R) ((R == 0) ? commSize-1 : R-1)
 #define RECV buffer_switch
 #define SEND !buffer_switch
-#define HEADS 1 //..okay
+#define HEADS 1 //..okayface.jpg
 #define TAILS 2
 #define COIN_FLIP 2
 #define ACC(A, R, C) A[tt_total * R + C]
@@ -389,6 +389,10 @@ int main( int argc, char **argv ) {
 					}
 
 					if ( isMyJob ) {
+						//Fill in the passed-around buffer (occupations) with the current occupation information
+						
+
+
 						int myNumTroops = edgeActivity[k][other_tt_num];
 						int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
 						printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
