@@ -19,7 +19,7 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**a
 	}
 
 	char* graphout = malloc(12 + digits);
-	sprintf(graphout, "bin/graphout%d", round_num);
+	sprintf(graphout, "graphs/graphout%d", round_num);
 
 	MPI_File mfile;
 	MPI_Status status;
