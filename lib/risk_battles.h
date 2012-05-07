@@ -48,6 +48,7 @@ void apply_strategy(int territory, int tt_total, int *troopCounts, int *teamIDs,
 				troopsToPlace += remainder;
 				remainder = 0;
 			}
+			
 			if (diceRoll(2) == 1) {
 				ASSIGN_ATTACK(outboundEdge[i], troopsToPlace);
 			} else {

@@ -28,14 +28,14 @@ int main( int argc, char **argv ) {
 	int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
 	int tt_total = 0; //Total number of territories being warred
 	int num_iterations = 0;
-	int max_iterations = INT_MAX;
+	int max_iterations = 10; //INT_MAX;
 
 	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
 		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
 		printf("Caught max iterations of %d\n", max_iterations);
 	}
 
-	srand( myRank + time(NULL) ); //BIG COMMENT
+	srand( myRank ); //BIG COMMENT -- NEED TO ADD BACK time(NULL) after testing
 
 	int *troopCounts; //Number of troops each territory has
 	int *teamIDs; //What team is each territory under control of? (team ID = starting node # for now)
@@ -220,12 +220,12 @@ int main( int argc, char **argv ) {
 							int myNumTroops = edgeActivity[k][other_tt_num];
 							int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
 							//	printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-							//printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-							//	myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+							printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+								myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 							
 							EDGE_RESULT result = do_battle( my_tt_num, other_tt_num, myNumTroops, otherNumTroops );
-							//printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-							//	myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
+							printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+								myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
 
 							edgeResults[ k ][ other_tt_num ] = result;
 						}
@@ -253,16 +253,6 @@ int main( int argc, char **argv ) {
 		for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
 			MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
 
-			//iterate over slice we're given (report card for terr x)
-			//on diag, continue
-
-			//for spot [x][y]: check if current process has data for x
-			// - if so, check to see if there's data in edgeResults[x][y]
-			//    - anyone from terr [y] on border of [x]?
-
-			//for spot [x][y]: check if current process has data for y
-			// - if so, check for data in edgeResults[y][x]
-
 			int working_offset = statuses[SEND].MPI_TAG;
 
 			int x; //representing the current report card we have
@@ -270,14 +260,40 @@ int main( int argc, char **argv ) {
 
 			for( x = 0; x < tt_per_rank; x++ ) { //for every report card we just recv'd...
 				for( y = 0; y < tt_total; y++ ) { //for every territory the report card asks about...
+					
 					int tt_card = x + working_offset;
-					int localy = y - tt_offset;
+
+					/* report card for tt_card wants to know about the conflict between tt_card and y
+
+						you can answer this question if you have data for tt_card or data for y
+
+						if you have data for tt_card:
+
+						look up conflict [x][y] --> this spits back data
+						--myAction, myTroops == tt_card's actions
+						--otherAction, otherTroops == y's actions
+
+						write on the card -
+						--troops on tt_card edge from tt_card - write in card[x][tt_card] (myTroops)
+						--troops on tt_card edge from y - write in card[x][y] (otherTroops)
+
+
+						if you have data for y:
+
+						look up conflict [y - tt_offset][tt_card] --> this spits back data
+						--myAction, myTroops == y's actions
+						--otherAction, otherTroops == tt_card's actions
+
+						write on the card -
+						--troops on tt_card edge from tt_card - write in card[x][tt_card] (otherTroops)
+						--troops on tt_card edge from y - write in card[x][y] (myTroops)
+					
+					*/
 
 					if( tt_card >= tt_offset && tt_card < tt_offset + tt_per_rank ) {
 						EDGE_RESULT e = edgeResults[x][y];
 					
-						//x = my
-						//y = other
+						//the actions taken by the 'card' territory are MYACTION
 						if( e.myAction == DEFEND && e.otherAction == DEFEND ) {
 							ACC(mpi_buffer[SEND], x, tt_card) += e.myTroops;
 							ACC(mpi_buffer[SEND], x, y) += 0;
@@ -290,7 +306,7 @@ int main( int argc, char **argv ) {
 							ACC(mpi_buffer[SEND], x, tt_card) += 0;
 							ACC(mpi_buffer[SEND], x, y) += 0;
 						}
-						else if( e.otherAction == ATTACK ) {
+						else if( e.myAction == DEFEND ) {
 							ACC(mpi_buffer[SEND], x, tt_card) += e.myTroops;
 							ACC(mpi_buffer[SEND], x, y) += e.otherTroops;
 						}
@@ -298,15 +314,14 @@ int main( int argc, char **argv ) {
 					}
 
 					if(y >= tt_offset && y < tt_offset + tt_per_rank) {	
-						EDGE_RESULT e = edgeResults[localy][tt_card];
-						
-						//x is other
-						//y is my
-						if(e.myAction == DEFEND && e.otherAction == DEFEND) {
+						EDGE_RESULT e = edgeResults[y - tt_offset][tt_card];
+
+						//the actions taken by the card territory are OTHERACTION
+						if(e.otherAction == DEFEND && e.myAction == DEFEND) {
 							ACC(mpi_buffer[SEND], x, tt_card) += e.otherTroops;
 							ACC(mpi_buffer[SEND], x, y) += 0;
 						}
-						else if(e.myAction == ATTACK && e.otherAction == ATTACK) {
+						else if(e.otherAction == ATTACK && e.myAction == ATTACK) {
 							ACC(mpi_buffer[SEND], x, tt_card) += 0;
 							ACC(mpi_buffer[SEND], x, y) += e.myTroops;
 						}
@@ -334,16 +349,15 @@ int main( int argc, char **argv ) {
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
-		/*
+		//DEBUG2
 		for ( i = 0; i < tt_per_rank; i++ ) {
-			printf("[%d] Border Data for %d: ", myRank, i + tt_offset);
+			printf("[%d - %d] Border Data for %d: ", myRank, num_iterations, i + tt_offset);
 			for(j = 0; j < tt_total; j++)
 			{
 				printf("(%d): %d; ", j, ACC(mpi_buffer[SEND], i, j));
 			}
-			printf("\n");
+			printf("\n\n");
 		}
-		*/
 
 		bzero( teamIDs_temp, tt_total * sizeof(int) );
 		bzero( troopCounts_temp, tt_total * sizeof(int) );

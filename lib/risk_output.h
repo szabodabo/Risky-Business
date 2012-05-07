@@ -53,7 +53,7 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**a
 		{
 			buffer[buf_offset++] = adjMatrix[i][j];
 			buffer[buf_offset++] = abs(edgeActivity[i][j]);
-			buffer[buf_offset++] = edgeActivity[i][j] < 0;
+			buffer[buf_offset++] = edgeActivity[i][j] > 0;
 		}
 	}
 
