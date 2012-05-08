@@ -52,29 +52,54 @@
 		Finally, if no troops remain on the board, the game is considered a draw and the gameboard begins recovering from the armageddon that has transpired (for the sake of this simulation, we do not model the reconstruction of humanity).
 
 		\section*{Implementation}
-		To process events in parallel, each compute node must have a subset of the data used to represent the entire simulation.  
-		Because the total amount of data being stored for the entire simulation grows exponentially with the size of the input graph, we partition the graph into sets of vertices, with each compute node being responsible for a given slice of the graph.  
-		A compute node stores the team, total troop count, battle decisions, and battle resolutions for each of its vertices.
-		Because each battle is fought over an edge, and an edge may connect two vertices whose data is contained on two different compute nodes, we elect a single compute node to be responsible for the battle that takes place on any given edge of the graph.
-		Being that edge-coloring is known to be an NP-Complete problem, we devised an approximate solution for assigning battle computation to each compute node such that the work was resonable evenly distributed across all compute nodes: each territory flips a coin at the start of its turn; upon entering a battle, the coin flips are compared.  
-		If the coin flips are the same, the compute node whose territory has a lower ID number is responsible for the calculation; otherwise, the other compute node is responsible.
 
-		Our parallelized simulation models each game round in two main stages: an edge conflict stage and an internal vertex conflict stage.
-		First, the edge conflict resolution stage determines and computes the outcomes of all battles that occurred during the round, with each battle taking place on an edge (a border between territories). 
-		Because of the graph partitioning scheme, it was necessary to communicate a territory's battle stances to each of its bordering territories.  
-		We did this using a round-robin inter-node communication method that enabled us to pass slices of a larger matrix of battle information to each node in turn; each compute node would scan the slice of battle data that it received, taking note of any important information about bordering territories engaging in battles with any of its territories.  
-		Once all information was passed around, each compute node had enough information to compute the results for its share of battles for the turn (our coin-flip algorithm ensures that no computation is performed redundantly).  
-		At this point in the turn, all battle information is decided. 
-		To communicate this information back to the territories that it affects, we again utilize a round-robin data passing scheme that we refer to as the \emph{report card scheme}: each compute node creates and fills in a report card about all territories for which it is responsible.
-		Each compute node then passes its report card to its right-hand neighbor (for the sake of simplicity, we visualize the compute nodes in a circular arrangement).  
-		The neighbor then fills in information that it had computed about the first compute node's territories and passes the report card to its right. 
-		This process continues until the report card arrives back at its owner, ensuring that at the end of the round-robin, each compute node's report card will have been filled in by each of the other compute nodes.
+		To process events in parallel, we partition the data such that each compute node has a subset of the data used to represent the entire simulation.
+		In order to ensure the simulation information is easily partitioned and circulated between nodes, we store it in several matrices. 
+		The gameboard graph itself is represented as a 2-D adjacency matrix where $\emph{adjMatrix}[x][y] = 1$ if there is an edge between territory $x$ and territory $y$. 
+		We also store a 1-D matrix of troop counts as well as a 1-D matrix of team affiliations ($\emph{matrix}[x]$ equals the troop counts/team affiliation for territory $x$). 
+		Each node contains a slice of the adjacency matrix, giving it the full adjacency data for a subset of the total vertices in the graph.
+		We referto these vertices/territories as being 'owned' by the compute node.
+		Each node also contains the entirety of the troop count and team affilication matrices as we determined that incurring extra memory overhead to store the entirety of these matrices on each compute node was preferrable to the performance overhead of passing around slices of two extra matrices.
+		During the beginning of each simulation turn, each node uses its slice of adjacency data and the troop counts/team affiliation data to determine the edge-troop distributions for each vertex that it owns.
+		This data is stored in a second matrix slice, which we referred to as the edge activity matrix. 
+		The edge activity matrix is similar to the adjacency matrix, where $\emph{edgeActivityMatrix}[x][y] = T$ represents $|T|$ troops from territory $x$ allocated to the edge $(x, y)$ in the graph. 
+		If $T > 0$, $x$ is attacking; if $T <= 0$, $x$ is defending. 
+		From here, the simulation step can be divided into three main phases - the conflict resolution phase, data circulation phase, and the final inner-vertex conflict resolution phase. 
+
+		\subsection*{Conflict Resolution}
+
+		During the conflict resolution phase, we implement a round-robin inter-node communication schema that circulates each slice of edge activity to every compute node in turn. 
+		Each node scans each slice of $\emph{edgeActivity}$ that it receives to see which territories attacked/defended against it this turn.
+		Since for any given conflict on an edge $(x, y)$ either the compute node that owns $x$ or the compute node that owns $y$ could theoretically compute the battle resolution, we use a randomized algorithm to balance the computational work between nodes.
+		Each territory flips a coin at the start of the turn.
+		Upon entering a battle, the coin flips are compared.
+		If the coin flips are the same, the compute node who owns the territory with a lower ID number is responsible for the calculation; if the coin flips are different, the compute node who owns the territory with a higher ID number is responsible for the calculation.
+		Since this problem of dividing edge conflicts between owner processes reduces to the NP-Complete problem of edge coloring, we devised the aforementioned approximate solution to reasonably distribute the work in a quick, low-cost fashion. This coin flipping divides work evenly and also ensures that no redundant calculations are performed.
+
+		\subsection*{Data Circulation}
+
+		After all the battle data is calculated, each territory needs to be made aware of the results of battles that it was a part of. 
+		Since the battle computation may not have occurred on the compute node that owns the territory, it is neccessary to again circulate data amongst the nodes. 
+		To do this, we again employ a round-robin passing schema that we referred to as the \emph{report card scheme}. 
+		Each compute node creates blank a 'report card' about all the territories that it owns and fills in the data that it has about them.
+		The report card itself is another matrix slice similar to $\emph{edgeActivity}$, where $\emph{reportCard}[x][y] = T$ represents $|T|$ troops from $x$'s army surviving in the battle on edge $(x, y)$ and advancing to $y$. 
+		If $x = y$, the implication is that $x$ defended and surviving troops retreated back to $x$. 
+		After filling in its own data, the compute node passes the card to its right-hand neighbor (for simplicity, we visualize the compute nodes in a circular arrangement).
+		The neighbor then fills in the information that $\emph{it}$ has about the territories on the report card and again hands the card off to the next node.
+		This process continues until the report card arrives back at its owner, ensuring that at the end of the round-robin, each compute node's report card will have been filled in completely by each of the other compute nodes.
+
+		\subsection*{Inner-Vertex Conflict Resolution}
+
+		Now that each compute node has all the relevant battle data pertaining to the territories that it owns, it can determine who (if anyone) has conquered these territories. 
+		For each territory it owns, it computes the total remaining number of troops from each team currently occupying that territory.
+		The team with the maximum number of troops occupying the territory becomes the new owner of the territory. 
+		At this point, each compute node now has a new set of data about each of its territories: team membership and troop counts. 
+		Each compute node communicates this data to all other compute nodes via MPIAllreduce. 
+		Simple checking is performed to see if the game is in an end state, and then the next simulation round begins.
+
 		
-		Next, the internal vertex conflict resolution stage uses the data from the edge-conflict phase to decide which territories were conquered by which teams. 
-		After all battles and takeovers are resolved, each compute node computes the total remaining number of troops in each territory and then decides which team now owns each territory that it is responsible for.
-		At this point, each compute node has a new set of data about each of its territories; critical data such as team membership, total troop counts, and new coin flips for battle computation are distributed from each compute node to each other compute node via AllReduce.
-		
-		\section*{Performance Analysis}
+		\section*{Related Work}
+
 		
 		\begin{center}
 			\includegraphics[width=.45\textwidth]{graphs.eps}
@@ -89,11 +114,7 @@
 		\end{center}
 		
 		Proin scelerisque urna et velit rutrum non feugiat nibh luctus. Aliquam posuere viverra lectus ut varius. Nam at erat tellus. Donec sed consectetur felis. Praesent at justo sit amet est vehicula pharetra viverra et magna. Nulla dignissim consectetur facilisis. Vestibulum a dui ligula. Nullam ornare sollicitudin molestie. Integer fringilla lacus ut metus lobortis mollis. Fusce magna velit, pulvinar a molestie vel, cursus et lorem. Phasellus semper pellentesque turpis eget faucibus. Proin at neque eu neque elementum sollicitudin vitae sit amet nunc. Etiam nec erat ut enim sagittis facilisis. Curabitur sollicitudin convallis arcu sit amet dignissim. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
-		
-
-
-
-		
+				
 		\section*{Conclusion}
 		Nullam tortor mi, volutpat quis auctor non, aliquam id tellus. Morbi a massa libero, id tempus mi. Aliquam et sapien non est mollis interdum. Cras felis diam, luctus eget pellentesque ut, lacinia nec dui. Aenean eu orci neque, eu volutpat enim. Sed eleifend fringilla turpis, sed pharetra libero mollis non. Quisque ultrices, purus ut sagittis euismod, orci risus venenatis lacus, a auctor diam augue vitae dolor. Duis eleifend pulvinar enim ac mollis. Nulla auctor metus vel turpis consequat aliquam.
 		
