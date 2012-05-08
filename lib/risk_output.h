@@ -8,7 +8,7 @@
 #include "mpi.h"
 #include "risk_macros.h"
 
-void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int**adjMatrix, int **edgeActivity, int* troopCounts, int *teamIDs)
+void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int **adjMatrix, int **edgeActivity, int* troopCounts, int *teamIDs)
 {
 	int digits = 0;
 	int r = round_num;

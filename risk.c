@@ -12,6 +12,7 @@
 #include "lib/risk_input.h"
 #include "lib/risk_battles.h"
 #include "lib/risk_output.h"
+#include "lib/risk_performance.h"
 
 //GIANT IDEA:
 //Rule change --> it is totally legal to not leave any troops in your home node. If all troops from a node
@@ -28,7 +29,7 @@ int main( int argc, char **argv ) {
 	int tt_offset = 0; //Which territory do we start with? (which is the first territory in our set)
 	int tt_total = 0; //Total number of territories being warred
 	int num_iterations = 0;
-	int max_iterations = 10; //INT_MAX;
+	int max_iterations = INT_MAX;
 
 	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
 		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
@@ -100,27 +101,18 @@ int main( int argc, char **argv ) {
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( coinFlips_temp, coinFlips, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
-	/*
-	// Print all territory current total troop counts
-	if (myRank == 0) {
-		printf("tt_total is %d\n", tt_total);
-		printf("==============================================\n");
-		printf("Current Total Troop Counts:\n");
-		printf("==============================================\n");
-		printf("TERRITORY | NUM_TROOPS\n");
-		for (i = 0; i < tt_total; i++) {
-			printf("%9d | %10d\n", i+tt_offset, troopCounts[i]);
-		}
-	}
-	*/
-
 	//MAIN LOOP 
 
 	int loopCondition = 1;
 
+	//PERFORMANCE VARIABLES
+	double iteration_cycles = 0;
+	double work_cycles_1 = 0;
+	double work_cycles_2 = 0;
+	//END PERFORMANCE VARIABLES
+
 	while ( loopCondition == 1 ) {
 
-		//printf("Top of loop!\n");
 		num_iterations++;
 
 		for ( i = 0; i < tt_per_rank; i++ ) {
@@ -133,7 +125,6 @@ int main( int argc, char **argv ) {
 			//Apply a battle strategy for each node this Rank is responsible for
 			apply_strategy( tt_offset+i, tt_total, troopCounts, teamIDs, adjMatrix[i], edgeActivity[i] );
 		}
-
 		
 		//Graph printing
 
@@ -163,30 +154,10 @@ int main( int argc, char **argv ) {
 		// - Flip buffer switch ( SEND buffer becomes the RECV buffer [we're done with that data]; RECV becomes the SEND buffer )
 		// - But don't send when i = commSize-1 because we don't need to
 
-		//3 procs
-		/*
-		i = 0
-		proc1 does data1
-		proc2 does data2
-		proc3 does data3
-		SEND to i+1, RECV from i-1
-
-		i = 1
-		proc1 does data3
-		proc2 does data1
-		proc3 does data2
-		SEND to i+1, RECV from i-1
-
-		i = 1
-		proc1 does data2
-		proc2 does data3
-		proc3 does data1
-		SEND to i+1, RECV from i-1 <=== this one is only useful if we're RECVing into our Rank's actual data store (<spoiler>we're not.</spoiler>)
-
-	*/
 
 		statuses[SEND].MPI_SOURCE = myRank;
 		statuses[SEND].MPI_TAG = tt_offset;
+
 
 		for ( i = 0; i < commSize; i++ ) { // I -> iteration of MPI hot-potato
 			//Post requests if we need to
@@ -194,9 +165,7 @@ int main( int argc, char **argv ) {
 				MPI_Isend( mpi_buffer[SEND], tt_total * tt_per_rank, MPI_INT, NEXT_RANK_FROM(myRank), statuses[SEND].MPI_TAG, MPI_COMM_WORLD, &requests[SEND] );
 				MPI_Irecv( mpi_buffer[RECV], tt_total * tt_per_rank, MPI_INT, PREV_RANK_FROM(myRank), MPI_ANY_TAG, MPI_COMM_WORLD, &requests[RECV] );
 			}
-			//Work on data
-			//printf("[%d] Working data from rank %d (Tag %d)\n", myRank, statuses[SEND].MPI_SOURCE, statuses[SEND].MPI_TAG);
-
+			
 			int working_offset = statuses[SEND].MPI_TAG;
 
 			for ( j = 0; j < tt_per_rank; j++ ) { // J -> territories in currently received slice (rows of send buffer)
@@ -219,13 +188,14 @@ int main( int argc, char **argv ) {
 						if ( isMyJob ) {
 							int myNumTroops = edgeActivity[k][other_tt_num];
 							int otherNumTroops = ACC(mpi_buffer[SEND], j, my_tt_num);
-							//	printf("[%d] Battle between MyTerr #%d and OtherTerr #%d is my job!\n", myRank, my_tt_num, other_tt_num);
-							printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-								myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
+							
+							//printf("[%d] (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							//	myRank, my_tt_num, myNumTroops, other_tt_num, otherNumTroops);
 							
 							EDGE_RESULT result = do_battle( my_tt_num, other_tt_num, myNumTroops, otherNumTroops );
-							printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
-								myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
+							
+							//printf("[%d] AFTER: (T#%d) My Troops: %d; (T#%d) Other Troops: %d\n", 
+							//	myRank, my_tt_num, result.myTroops, other_tt_num, result.otherTroops); 
 
 							edgeResults[ k ][ other_tt_num ] = result;
 						}
@@ -240,7 +210,6 @@ int main( int argc, char **argv ) {
 			buffer_switch = !buffer_switch;
 		}
 
-		//printf("[%d] HERE GOES FUCK ALL NOTHING\n", myRank);
 		MPI_Barrier( MPI_COMM_WORLD );
 
 		//Now that all of the edge results have been computed, we need to pass around potential occupation data.
@@ -349,7 +318,7 @@ int main( int argc, char **argv ) {
 
 		MPI_Barrier( MPI_COMM_WORLD );
 
-		//DEBUG2
+		/*
 		for ( i = 0; i < tt_per_rank; i++ ) {
 			printf("[%d - %d] Border Data for %d: ", myRank, num_iterations, i + tt_offset);
 			for(j = 0; j < tt_total; j++)
@@ -357,7 +326,7 @@ int main( int argc, char **argv ) {
 				printf("(%d): %d; ", j, ACC(mpi_buffer[SEND], i, j));
 			}
 			printf("\n\n");
-		}
+		}*/
 
 		bzero( teamIDs_temp, tt_total * sizeof(int) );
 		bzero( troopCounts_temp, tt_total * sizeof(int) );
@@ -382,8 +351,6 @@ int main( int argc, char **argv ) {
 		//Do coin flips
 		do_my_coin_flips(myRank, tt_per_rank, tt_offset, coinFlips_temp);
 
-		//Troop movement?
-
 		//If I'm bordered only by neighbors on my team, give my neighbors my troops.
 		//The problem with this is that if a friendly neighbor gets taken over, I'm now screwed.
 		//We can look at the teamIDs to find out who the neighbors are and send accordingly,
@@ -400,35 +367,7 @@ int main( int argc, char **argv ) {
 		MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 		MPI_Allreduce( coinFlips_temp, coinFlips, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
-		/*
-		//Graph printing
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		sleep(1);
-		if (myRank == 0) {
-			printf("graph G {\n");
-		}
-
-		sleep(myRank + 1);
-		for ( i = 0; i < tt_per_rank; i++ ) {
-			int territoryID = tt_offset + i;
-			//printf("Territory %d owned by Rank %d\n", territoryID, myRank);
-			//printf("Territories bordered by territory %d:\n", territoryID);
-			for ( j = 0; j < tt_total; j++ ) {
-				if ( adjMatrix[i][j] == 1 ) {
-					printf("\t\"%d{%d} (%d)\" -- \"%d{%d} (%d)\"\n", territoryID, teamIDs[territoryID], troopCounts[territoryID], j, teamIDs[j], troopCounts[j]);
-				}
-			}
-		}
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		sleep(1);
-		if (myRank == 0) {
-			printf("\tsep = 1\n\toverlap = false\n\tsplines = true\n}\n");
-		}
-
-		sleep(1);
-		*/
+		//not sure if we need this. look at it later.
 		MPI_Barrier( MPI_COMM_WORLD );
 
 		//If one team controls all territories, stop the game.
@@ -448,8 +387,6 @@ int main( int argc, char **argv ) {
 				printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
 			}
 		}
-
-
 
 		if ( loopCondition == 1 ) { //If already chose to end the game, we don't need to do this.
 
