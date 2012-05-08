@@ -396,7 +396,7 @@ int main( int argc, char **argv ) {
 		if ( loopCondition == 0 ) {
 			if ( myRank == 0 ) {
 				//sleep(1);
-				//printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
+				printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
 			}
 		}
 
@@ -421,7 +421,7 @@ int main( int argc, char **argv ) {
 			if ( loopCondition == 0 ) {
 				if ( myRank == 0 ) {
 					//sleep(1);
-					//printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
+					printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
 				}
 			}
 		}
@@ -429,7 +429,7 @@ int main( int argc, char **argv ) {
 			loopCondition = 0;
 			if ( myRank == 0 ) {
 				//sleep(1);
-				//printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
+				printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
 			}
 		}
 

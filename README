@@ -19,7 +19,7 @@ Team Members:
 	-parallel input/output
 	-battle resolution
 	-'report card' round-robin (implementation)
- -Collab -->
+ -Both -->
 	-'report card' round-robin (conceptual)
 	-conflict resolution round-robin (conceptual/implementation)
 	-anything not mentioned (boilerplate, allreduces, potentially lewd //comments)
@@ -34,19 +34,22 @@ Submitted Files:
     - removed.c: Old code removed from simulator during development
     - to_graphviz.c: Converts output binary graphs to GraphViz format
     - scripts/: Contains helpful parsing/running/other scripts
-- graphs/: Contains output graph files binary files
-- input/: Contains input graph binary files: graphbin<N> is an N-node complete graph
-- lib/
+ - graphs/: Contains output graph files binary files
+ - graphs/graphviz: Contains graphviz files (once generated)
+ - graphs/graphviz/png: Contains graph png files for each step of the simulation
+	-Currently contains output from a run on a 16-vertex wheel graph
+ - input/: Contains input graph binary files: graphbin<N> is an N-node wheel graph (at the moment)
+ - lib/
     - risk_battles.h: Contains battle resolution functions for simulator
     - risk_chance.h: Contains random & diceroll functions for simulator
     - risk_input.h: Input file parser for simulator
     - risk_macros.h: Contains constants and inline functions for simulator
     - risk_output.h: Output file generator for simulator
     - risk_performance.h: Contains RDTSC cycle counter used for performance statistics
-- results/: Contains graphs/raw results used for performance analysis
-- Makefile: Build script
-- risk.c: Main source file for simulator
-- writeup.pdf: Final writeup for project
+ - results/: Contains graphs/raw results used for performance analysis
+ - Makefile: Build script
+ - risk.c: Main source file for simulator
+ - writeup.pdf: Final writeup for project
 
 =================================
 Build Instructions:
@@ -54,15 +57,25 @@ Build Instructions:
  - Run "make kratos" to build the project.
  - Run bin/gen <graph-type> <vertices> <troops-per-territory> <outputfilename> to create a graph binary
 	-Graph type = complete, wheel, or star
+	-To print the adjacency matrix for a graph binary, run bin/gen <graphbinary>
+
 - You can also create a user-defined graph by running bin/gen <inputfile> <outputfilename>
 	-Refer to the included example_graph.txt file for the format of the input file 
 
 =================================
 Run Instructions:
 =================================
- - Place the graph binary you want to run the simulation on in input
+ - Run make clean (this clears the entirety of the graph directory)
+ - Run make
+ - Place the graph binary you want to run the simulation on in the input directory
  - Rename it to 'graphbin'
  - Run "mpirun -np <N> bin/risk" to run the simulator.
+     -stdout output is the winning team (team -1 means a draw and everyone died) as well as timing metrics
  - Binary output can be found in the graphs/ directory
      - To convert binary output to .png files, run extras/scripts/to_gv.sh (this will create graphviz files as well as .png renders)
--Example .pngs are included for a run on a wheel graph of 10 vertices
+     - Graphviz .gv files are in graphs/graphviz; pngs are in graphs/graphviz/pngs
+ -Example .gvs and .pngs are included for a run on a wheel graph of 10 vertices and 100 troops per territory
+     - The number in brackets is the team affiliation of the vertex/territory
+     - The number in parenthesis is the troop count in that node
+     - IMPORTANT: GRAPHS ARE PRINTED __BEFORE__ THE CONFLICT IS RESOLVED --> THEY REPRESENT TROOP DISTRIBUTIONS AT THE START OF EACH TURN (blue numbers are    defending troops, red numbers are attacking troops)
+
