@@ -30,45 +30,25 @@
 		\section*{Introduction}
 		
 		Our simulation is designed as a territory-conquest simulator, with multiple teams competing against one another to dominate the entirety of the gameboard. 
-
 		The gameboard itself is laid out as an undirected graph in which territories correspond to vertices and borders between territories correspond to edges.
-
 		Each territory has a troop count, representing the number of soliders currently stationed in that territory, as well as a team affiliation, representing the team currently controlling it.
-
 		Gameplay consists of a series of turns, each with two stages. 
-
 		During the troop placement stage, each territory determines how many troops from its army to place on each of its borders.
-
 		Troops placed on a border with another territory may either be attacking that territory or defending against an attack.
-
 		After all troops have been placed, the game proceeds to the conflict resolution stage.
-
 		Along every edge of the graph (every border between territories), a battle takes place if at least one of the territories chose to attack during the placement stage (if both teams defend, no battle takes place and all troops survive).
-
 		Battles are resolved in the following fashion: 
-
 		Territories flip a number of coins depending on the action they chose (attack or defend) and the amount of troops they have stationed on the edge where the battle is taking place. 
-
 		Attacking territories flip one coin per solider; defending territories flip two coins per solider.
-
 		After all coins are flipped, the number of heads for each side is tallied and subtracted from the number of opposing soliders on that edge (each coin flip is a gunshot; each heads is a successful hit and kill).
-
 		This coin flipping process repeats until one or both territories have no further soliders remaining on that edge. 
-
 		After all battles are resolved, surviving attacking troops proceed into the territory they were attacking, while defending troops retreat back to the territory they were defending. 
-
 		The team with the largest number of troops present in a given territory after the battle phase becomes the new owner of that territory, and troops from other teams currently occupying the territory are considered killed.
-
 		Territories are then given a 'recruitment bonus' (a number of troops added to their troop count) depending on their current troop count - this is currently 20 percent but is easily configurable within the rules of the game.
-
 		The turn is then considered completed, and the game proceeds back to the troop placement stage.
-
 		The game ends if, at the end of a turn, one of three conditions is met. 
-
 		If every territory is controlled by a single team, that team is considered the winner. 
-
 		Likewise, if only one team still has troops remaining on the board (territories may lose all troops but remain unconquered), it is considered the winner.
-
 		Finally, if no troops remain on the board, the game is considered a draw and the gameboard begins recovering from the armageddon that has transpired (for the sake of this simulation, we do not model the reconstruction of humanity)
 
 		\section*{Related Work}
