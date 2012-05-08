@@ -10,7 +10,7 @@
 
 \title{
 	\textbf{
-		Creating a Turn-Based Conflict Resolution Simulator
+		Risky Business: \\Parallel Turn-Based Conflict Simulation
 	}
 }
 \author{Noah Zimmt and Dakota Szabo}
@@ -108,9 +108,9 @@
 		We ran two scaling studies on our parallel algorithm in order to analyze its performance.
 		The first was a simple analysis to ensure that performance did not degrade when the algorithm was run on inputs of increasing size.
 		\begin{center}
-			\includegraphics[width=.45\textwidth]{graphs.eps}
+			\includegraphics[width=.45\textwidth]{results/graphs/graphs.eps}
 			%\vspace*{-10pt}
-			\small{Figure 1: Performance of the algorithm on varying input sizes}
+			\small{Figure 1: Performance on varying input sizes}
 		\end{center}
 
 		Utilizing 16 compute nodes, we ran the simulation on complete graphs with size $2^{n}$, with $n$ ranging from 4 to 13 (16 to 8192 vertices). 
@@ -124,7 +124,7 @@
 		The implication here is that slight load imbalances are likely responsible for the noise with small graph sizes, with the noise being reduced as graph size increases because the irregularities are amortized over a much larger sample space.
 		The second scaling study we ran was a strong scaling study, with a various quantities of compute nodes working on a graph of 10080 vertices (we chose this number due to the fact that its evenly divisible by a large quantity of integers less than 16). 
 		\begin{center}
-			\includegraphics[width=.45\textwidth]{ranks.eps}
+			\includegraphics[width=.45\textwidth]{results/graphs/ranks.eps}
 			%\vspace*{-10pt}
 			\small{Figure 2: Strong scaling study (10080 vertex complete graph)}
 		\end{center}

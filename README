@@ -7,6 +7,24 @@
 ====================================================================
 
 =================================
+Team Members:
+ -Dakota --> 
+	-graphviz code
+	-all shell scripts 
+	-C code for graph binary reading
+	-strategy implementation
+	-'coin-flip' load distribution (conceptual/implementation)
+	-EVERY SINGLE FRIGGIN' EXCESSIVE MACRO that may or may not have been really useful
+ -Noah -->
+	-parallel input/output
+	-battle resolution
+	-'report card' round-robin (implementation)
+ -Collab -->
+	-'report card' round-robin (conceptual)
+	-conflict resolution round-robin (conceptual/implementation)
+	-anything not mentioned (boilerplate, allreduces, potentially lewd //comments)
+
+=================================
 Submitted Files:
 =================================
  - bin/: Compiled Binaries
