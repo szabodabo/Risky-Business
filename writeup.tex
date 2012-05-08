@@ -133,7 +133,7 @@
 		Using greater than 6 compute nodes on an input of 8192 vertices seems to have a non-appreciable effect on the execution time of the algorithm. The reason for this immediate drop-off after a previously nearly direct correlation between more processors and speedup (from 2 to 6 compute nodes) is unclear, but it would appear that the sheer amount of data being passed around during the round robin phases is enough to counterbalance the speedup from doing less computational work per node. It is also possible that the (ever varying) load on the kratos server is responsible for slight inaccuracies with the data, but the other tests we ran seemed to verify these results.
 				
 		\section*{Conclusion}
-		Our parallel turn-based conflict simulator was largely a success; it is able to provide "realistic" output given that the game it was created to model is largely based on chance.  
+		Our parallel turn-based conflict simulator was largely a success; it is able to provide "realistic" output given that the game it was created to model is largely based on chance; additionally, visualization of output is performed with included code to convert simulation snapshots to PNG graphics via the \emph{GraphViz} library.
 		Given that the simulation was difficult to parallelize due to its high degree of communication among territories in the graph, we observed an approximately linear speedup (3 compute nodes $\approx$ 1.5x speedup on an 8192-node complete graph) with an added number of compute nodes until 6 compute nodes was reached, at which point the simulation exhibited a plateau in performance (most likely indicating that the communication required was no longer benefitted by adding additional compute nodes).
 
 		
