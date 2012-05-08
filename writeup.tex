@@ -99,7 +99,15 @@
 
 		
 		\section*{Performance Analysis}
-		We ran two scaling studies on our parallel algorithm in order to analyze its performance. The first was a simple analysis to ensure that performance did not degrade when the algorithm was run on inputs of increasing size. Utilizing 16 compute nodes, we 
+		In testing the performance of our algorithm, we obtained data on the average compute time for each round of the simulation. 
+		Since the actual number of rounds required to complete a game varies entirely with the input and not the algorithm, we capped the simulation rounds at ten and returned the aggregate of the time spent per round. 
+		Due to the way we designed the algorithm, we were unable to directly obtain information about the time spent in the compute phase versus the time spent in the message sending phase - we post non-blocking message sends and receives $\emph{before}$ we do computation so that they can execute in the background while we peform other computations.
+		However, we obtained data on the two most computation and communication-intensive portions of our algorithm - the conflict resolution phase and the data circulation phase (phases 1 and 2 in the graphs, respectively). 
+		Since the conflict resolution phase is both computation-heavy and communication-heavy compared to the relatively computationally light but equally communication heavy data circulation phase, comparison of the two allows us to see where communication overhead dominated computational overhead and vice versa. 
+		
+		\subsection*{Scaling Studies}
+		We ran two scaling studies on our parallel algorithm in order to analyze its performance.
+		The first was a simple analysis to ensure that performance did not degrade when the algorithm was run on inputs of increasing size. Utilizing 16 compute nodes, we ran the simulation on complete graphs with size $2^{n}$, with $n$ ranging from 4 to 13 (16 to 8192 vertices). We noted that the computation time for complete graphs scaled exponentially with the number of vertices in the graph, which is entirely in keeping with our expectations. Since the amount of work that must be done by the algorithm varies linearly with the number of edges in the graph, it varies exponentially with the number of vertices in the graph 
 
 		
 		\begin{center}
