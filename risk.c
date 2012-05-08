@@ -436,7 +436,27 @@ int main( int argc, char **argv ) {
 	}
 
 	global_end = rdtsc();
-	double total_secs = TO_SECS(global_end - global_start);
+	double global_total = TO_SECS(global_end - global_start);
+
+	double global_avg;
+	MPI_Allreduce(&global_total, &global_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	global_avg /= commSize;
+
+	double phase1_avg;
+	MPI_Allreduce(&phase1_total, &phase1_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	phase1_avg /= commSize;
+
+	double phase2_avg;
+	MPI_Allreduce(&phase2_total, &phase2_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	phase2_avg /= commSize;
+
+	if(myRank == 0)
+	{
+		printf("#METRIC RANKS TERRITORIES SECONDS\n");
+		printf("GLOBAL %d %d %f\n", commSize, tt_total, global_avg);
+		printf("PHASE1 %d %d %f\n", commSize, tt_total, phase1_avg);
+		printf("PHASE2 %d %d %f\n", commSize, tt_total, phase2_avg);
+	}
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;
