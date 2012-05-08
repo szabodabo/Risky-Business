@@ -10,9 +10,11 @@ set style line 6 lt 2 lw 5 lc rgb "green"
 
 set xlabel "Territories (Nodes in Graph)"
 set ylabel "Average Time per Round (seconds)"
+#set logscale y
+#set logscale x 2
 set key bottom right
 
 set output "graph.eps"
-plot "global.txt" using 3:4 ls 1 title "Global" with linespoints, \
-     "phase1.txt" using 3:4 ls 2 title "Phase 1" with linespoints, \
-     "phase2.txt" using 3:4 ls 3 title "Phase 2" with linespoints
+plot "global.txt" using 3:4 ls 1 title "Global" with points, \
+     "phase1.txt" using 3:4 ls 2 title "Phase 1" with points, \
+     "phase2.txt" using 3:4 ls 3 title "Phase 2" with points
