@@ -60,6 +60,9 @@ void print_graph(int round_num, int rank, int num_ranks, int tt_per_rank, int **
 	MPI_File_write_at(mfile, offset, buffer, ints_per_rank, MPI_INT, &status);
 
 	MPI_File_close(&mfile);
+
+	free(graphout);
+	free(buffer);
 }
 
 #endif

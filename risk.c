@@ -110,6 +110,10 @@ int main( int argc, char **argv ) {
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( coinFlips_temp, coinFlips, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 
+	int *mpi_buffer[2];
+	mpi_buffer[SEND] = calloc( tt_total * tt_per_rank, sizeof(int) );
+	mpi_buffer[RECV] = calloc( tt_total * tt_per_rank, sizeof(int) );
+
 	//MAIN LOOP 
 
 	int loopCondition = 1;
@@ -142,9 +146,8 @@ int main( int argc, char **argv ) {
 
 		//printf("[%d] Beginning result exchange\n", myRank);
 
-		int *mpi_buffer[2];
-		mpi_buffer[SEND] = calloc( tt_total * tt_per_rank, sizeof(int) );
-		mpi_buffer[RECV] = calloc( tt_total * tt_per_rank, sizeof(int) );
+		bzero(mpi_buffer[SEND], tt_total * tt_per_rank * sizeof(int) );
+		bzero(mpi_buffer[RECV], tt_total * tt_per_rank * sizeof(int) );
 
 		//LINEARIZE BUFFER DATA
 		for ( j = 0; j < tt_per_rank; j++ ) {
