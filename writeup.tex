@@ -118,6 +118,7 @@
 		Since the amount of work that must be done by the algorithm varies linearly with the number of edges in the graph, it varies exponentially with the number of vertices in the graph (going as $2^{vertices}$). 
 		We notice in the graph that although phase 2 performs substantially less computation, it only runs slightly faster than phase 1. 
 		This leads us to believe that the algorithm is largely dominated by its communication overhead. 
+		The actual computation done during this algorithm is quite small compared to the sizeable round-robin sends - a near gigabyte of data movement (for a 8192 vertex graph) will naturally dominate a random conflict resolution function.
 		We also note that the phase 1 curve is noticeably more irregular than the phase 2 curve, although its irregularity seems to smooth as the graph size increases. 
 		This is due to the fact that we distribute computations on a per-territory basis, with a 50 percent chance that either territory involved in a conflict has its owner compute node handle the conflict. 
 		The implication here is that slight load imbalances are likely responsible for the noise with small graph sizes, with the noise being reduced as graph size increases because the irregularities are amortized over a much larger sample space.
