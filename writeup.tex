@@ -81,23 +81,21 @@
 		After all the battle data is calculated, each territory needs to be made aware of the results of battles that it was a part of. 
 		Since the battle computation may not have occurred on the compute node that owns the territory, it is neccessary to again circulate data amongst the nodes. 
 		To do this, we again employ a round-robin passing schema that we referred to as the \emph{report card scheme}. 
-		Each compute node creates blank a 'report card' about all the territories that it owns and passes it to the other compute nodes in order to fill it in.
-		The report card itself is another matrix slice similar to $\emph{edgeActivity}$, where $\emph{reportCard}[x][y] = T$ represents the fact that $
+		Each compute node creates blank a 'report card' about all the territories that it owns and fills in the data that it has about them.
+		The report card itself is another matrix slice similar to $\emph{edgeActivity}$, where $\emph{reportCard}[x][y] = T$ represents $|T|$ troops from $x$'s army surviving in the battle on edge $(x, y)$ and advancing to $y$. 
+		If $x = y$, the implication is that $x$ defended and surviving troops retreated back to $x$. 
+		After filling in its own data, the compute node passes the card to its right-hand neighbor (for simplicity, we visualize the compute nodes in a circular arrangement).
+		The neighbor then fills in the information that $\emph{it}$ has about the territories on the report card and again hands the card off to the next node.
+		This process continues until the report card arrives back at its owner, ensuring that at the end of the round-robin, each compute node's report card will have been filled in completely by each of the other compute nodes.
 
-		Our parallelized simulation models each game round in two main stages: an edge conflict stage and an internal vertex conflict stage.
-		First, the edge conflict resolution stage determines and computes the outcomes of all battles that occurred during the round, with each battle taking place on an edge (a border between territories). 
-		Because of the graph partitioning scheme, it was necessary to communicate a territory's battle stances to each of its bordering territories.  
-		We did this using a round-robin inter-node communication method that enabled us to pass slices of a larger matrix of battle information to each node in turn; each compute node would scan the slice of battle data that it received, taking note of any important information about bordering territories engaging in battles with any of its territories.  
-		Once all information was passed around, each compute node had enough information to compute the results for its share of battles for the turn (our coin-flip algorithm ensures that no computation is performed redundantly).  
-		At this point in the turn, all battle information is decided. 
-		To communicate this information back to the territories that it affects, we again utilize a round-robin data passing scheme that we refer to as the \emph{report card scheme}: each compute node creates and fills in a report card about all territories for which it is responsible.
-		Each compute node then passes its report card to its right-hand neighbor (for the sake of simplicity, we visualize the compute nodes in a circular arrangement).  
-		The neighbor then fills in information that it had computed about the first compute node's territories and passes the report card to its right. 
-		This process continues until the report card arrives back at its owner, ensuring that at the end of the round-robin, each compute node's report card will have been filled in by each of the other compute nodes.
-		
-		Next, the internal vertex conflict resolution stage uses the data from the edge-conflict phase to decide which territories were conquered by which teams. 
-		After all battles and takeovers are resolved, each compute node computes the total remaining number of troops in each territory and then decides which team now owns each territory that it is responsible for.
-		At this point, each compute node has a new set of data about each of its territories; critical data such as team membership, total troop counts, and new coin flips for battle computation are distributed from each compute node to each other compute node via AllReduce.
+		\subsection*{Inner-Vertex Conflict Resolution}
+
+		Now that each compute node has all the relevant battle data pertaining to the territories that it owns, it can determine who (if anyone) has conquered these territories. 
+		For each territory it owns, it computes the total remaining number of troops from each team currently occupying that territory.
+		The team with the maximum number of troops occupying the territory becomes the new owner of the territory. 
+		At this point, each compute node now has a new set of data about each of its territories: team membership and troop counts. 
+		Each compute node communicates this data to all other compute nodes via MPIAllreduce. 
+		Simple checking is performed to see if the game is in an end state, and then the next simulation round begins.
 
 		
 		\section*{Related Work}
