@@ -36,6 +36,8 @@ int main( int argc, char **argv ) {
 	double phase1_start = 0, phase1_end = 0;
 	double phase2_start = 0, phase2_end = 0;
 	double phase1_total = 0, phase2_total = 0; // Number of seconds elapsed
+	//sanity check!
+	double total_seconds = rdtsc();
 
 	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
 		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
@@ -391,7 +393,7 @@ int main( int argc, char **argv ) {
 		if ( loopCondition == 0 ) {
 			if ( myRank == 0 ) {
 				//sleep(1);
-				printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
+				//printf("GAME OVER: Team %d wins after %d rounds.\n", curTeam, num_iterations);
 			}
 		}
 
@@ -416,7 +418,7 @@ int main( int argc, char **argv ) {
 			if ( loopCondition == 0 ) {
 				if ( myRank == 0 ) {
 					//sleep(1);
-					printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
+					//printf("GAME OVER: Team %d wins after %d rounds.\n", lastTeam, num_iterations);
 				}
 			}
 		}
@@ -424,7 +426,7 @@ int main( int argc, char **argv ) {
 			loopCondition = 0;
 			if ( myRank == 0 ) {
 				//sleep(1);
-				printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
+				//printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
 			}
 		}
 
@@ -454,12 +456,16 @@ int main( int argc, char **argv ) {
 	MPI_Allreduce(&phase2_total, &phase2_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	phase2_avg /= commSize;
 
+	total_seconds = rdtsc() - total_seconds;
+	total_seconds /= CURRENT_CLOCK;
+
 	if(myRank == 0)
 	{
 		printf("#METRIC RANKS TERRITORIES SECONDS\n");
 		printf("GLOBAL %d %d %f\n", commSize, tt_total, global_avg);
 		printf("PHASE1 %d %d %f\n", commSize, tt_total, phase1_avg);
 		printf("PHASE2 %d %d %f\n", commSize, tt_total, phase2_avg);
+		printf("#TOTAL RUNTIME: %f seconds\n", total_seconds);
 	}
 
 	MPI_Finalize();
