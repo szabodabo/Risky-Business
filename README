@@ -16,7 +16,7 @@ Submitted Files:
     - removed.c: Old code removed from simulator during development
     - to_graphviz.c: Converts output binary graphs to GraphViz format
     - scripts/: Contains helpful parsing/running/other scripts
-- graphs/: Contains input/output graph files
+- graphs/: Contains output graph files binary files
 - input/: Contains input graph binary files: graphbin<N> is an N-node complete graph
 - lib/
     - risk_battles.h: Contains battle resolution functions for simulator
@@ -34,11 +34,17 @@ Submitted Files:
 Build Instructions:
 =================================
  - Run "make kratos" to build the project.
- - Run 
+ - Run bin/gen <graph-type> <vertices> <troops-per-territory> <outputfilename> to create a graph binary
+	-Graph type = complete, wheel, or star
+- You can also create a user-defined graph by running bin/gen <inputfile> <outputfilename>
+	-Refer to the included example_graph.txt file for the format of the input file 
 
 =================================
 Run Instructions:
 =================================
+ - Place the graph binary you want to run the simulation on in input
+ - Rename it to 'graphbin'
  - Run "mpirun -np <N> bin/risk" to run the simulator.
  - Binary output can be found in the graphs/ directory
-     - Converter to text/graphviz is run by calling "bin/"
+     - To convert binary output to .png files, run extras/scripts/to_gv.sh (this will create graphviz files as well as .png renders)
+-Example .pngs are included for a run on a wheel graph of 10 vertices
