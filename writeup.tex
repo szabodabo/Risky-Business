@@ -5,8 +5,8 @@
 %\usepackage{amstext}
 %\usepackage{amsmath}
 %\usepackage{enumerate}
-%\usepackage{graphicx}
-%\usepackage{wrapfig}
+\usepackage{graphicx}
+\usepackage{wrapfig}
 
 \title{
 	\textbf{
@@ -98,23 +98,43 @@
 		Simple checking is performed to see if the game is in an end state, and then the next simulation round begins.
 
 		
-		\section*{Related Work}
-		Proin scelerisque urna et velit rutrum non feugiat nibh luctus. Aliquam posuere viverra lectus ut varius. Nam at erat tellus. Donec sed consectetur felis. Praesent at justo sit amet est vehicula pharetra viverra et magna. Nulla dignissim consectetur facilisis. Vestibulum a dui ligula. Nullam ornare sollicitudin molestie. Integer fringilla lacus ut metus lobortis mollis. Fusce magna velit, pulvinar a molestie vel, cursus et lorem. Phasellus semper pellentesque turpis eget faucibus. Proin at neque eu neque elementum sollicitudin vitae sit amet nunc. Etiam nec erat ut enim sagittis facilisis. Curabitur sollicitudin convallis arcu sit amet dignissim. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
-		
-
-		
-		
 		\section*{Performance Analysis}
 		We ran two scaling studies on our parallel algorithm in order to analyze its performance. The first was a simple analysis to ensure that performance did not degrade when the algorithm was run on inputs of increasing size. Utilizing 16 compute nodes, we 
+
+		
+		\begin{center}
+			\includegraphics[width=.45\textwidth]{graphs.eps}
+			%\vspace*{-10pt}
+			\small{Figure 1: Herpaderp}
+		\end{center}
 		
 		
+		\begin{center}
+			\includegraphics[width=.45\textwidth]{ranks.eps}
+			%\vspace*{-10pt}
+			\small{Figure 2: Herpaderpa}
+		\end{center}
+		
+				
 		\section*{Conclusion}
 		Nullam tortor mi, volutpat quis auctor non, aliquam id tellus. Morbi a massa libero, id tempus mi. Aliquam et sapien non est mollis interdum. Cras felis diam, luctus eget pellentesque ut, lacinia nec dui. Aenean eu orci neque, eu volutpat enim. Sed eleifend fringilla turpis, sed pharetra libero mollis non. Quisque ultrices, purus ut sagittis euismod, orci risus venenatis lacus, a auctor diam augue vitae dolor. Duis eleifend pulvinar enim ac mollis. Nulla auctor metus vel turpis consequat aliquam.
 		
+
+		\section*{Related Work}
+		Graph partitioning is a well-studied problem.  Our simulator used a trivial graph partitioning algorithm to divide up nodes among compute nodes.  Karypis and Kumar (IEEE HPC 1998) describe a parallel graph paritioning algorithm that promises high-performance partitioning with constraints on the partitioning schemes used.  In addition to graph partitioning, the distribution of computation among compute cores can be reduced to a variant of the NP-Complete edge-coloring problem as described by Holyer (Society for Industrial and Applied Mathematics, 1981); approximation algorithms exist to achieve a near-optimal solution (as described by Sanders and Steurer, ACM TALG, 2008).
+
 		\section*{Future Work}
-		Quisque velit neque, ullamcorper non iaculis sed, ornare pellentesque nulla. In pharetra cursus imperdiet. Duis nulla justo, bibendum et consequat congue, condimentum et turpis. Sed tempus, odio ut posuere volutpat, quam lacus interdum odio, ac porttitor elit turpis vitae turpis. Mauris eu ultrices augue. Sed fermentum elementum tristique. Nam ipsum ipsum, rhoncus vitae cursus suscipit, volutpat eu felis.
+		 - Further modularization of team strategy?
+		 - Scaling studies on BlueGene/L \& BlueGene/Q
+		 - Optimization of graph partitioning and/or calculation distribution
+		 - Graph visualization for higher territory counts.
+		 - Experiments with different graph shapes/type and effects on performance
 
 
 
 	\end{multicols}
 \end{document}
+
+
+%George Karypis and Vipin Kumar. 1998. Multilevel algorithms for multi-constraint graph partitioning. In Proceedings of the 1998 ACM/IEEE conference on Supercomputing (CDROM) (Supercomputing '98). IEEE Computer Society, Washington, DC, USA, 1-13.
+

@@ -48,24 +48,6 @@ GLOBAL 16 8192 7.010561
 PHASE1 16 8192 3.034697
 PHASE2 16 8192 3.818732
 #TOTAL RUNTIME: 70.514374 seconds
-PPCzimmtn@kratos:~/risk-esque-simulator> vim allresults2.txt allresults.txt
-2 files to edit
-PPCzimmtn@kratos:~/risk-esque-simulator> vim gengraph.sh 
-PPCzimmtn@kratos:~/risk-esque-simulator> vim gengraph.sh run.sh 
-2 files to edit
-PPCzimmtn@kratos:~/risk-esque-simulator> ./run.sh
-
-rm -f stdout*
-rm -f stderr*
-rm -f core.*
-rm -f bin/*
-rm -f graphs/graphviz/png/*.png
-rm -f graphs/graphviz/*.gv
-rm -f graphs/graphout*
-mpicc -Wall -g -I. risk.c -o bin/risk
-mpicc -Wall -g -I. extras/generator.c -o bin/gen
-mpicc -Wall -g -I. extras/to_graphviz.c -o bin/to_graphviz
-#METRIC RANKS TERRITORIES SECONDS
 GLOBAL 16 1024 0.160495
 PHASE1 16 1024 0.076450
 PHASE2 16 1024 0.072914
@@ -135,18 +117,6 @@ GLOBAL 16 8192 6.108397
 PHASE1 16 8192 3.606733
 PHASE2 16 8192 2.392395
 #TOTAL RUNTIME: 191.471751 seconds
-PPCzimmtn@kratos:~/risk-esque-simulator> ./run.sh
-
-rm -f stdout*
-rm -f stderr*
-rm -f core.*
-rm -f bin/*
-rm -f graphs/graphviz/png/*.png
-rm -f graphs/graphviz/*.gv
-rm -f graphs/graphout*
-mpicc -Wall -g -I. risk.c -o bin/risk
-mpicc -Wall -g -I. extras/generator.c -o bin/gen
-mpicc -Wall -g -I. extras/to_graphviz.c -o bin/to_graphviz
 #METRIC RANKS TERRITORIES SECONDS
 GLOBAL 16 1024 0.125925
 PHASE1 16 1024 0.070084
@@ -197,23 +167,6 @@ GLOBAL 16 8192 5.048340
 PHASE1 16 8192 2.543267
 PHASE2 16 8192 2.414755
 #TOTAL RUNTIME: 50.702882 seconds
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-PPCzimmtn@kratos:~/risk-esque-simulator> ^C
-PPCzimmtn@kratos:~/risk-esque-simulator> ./run.sh
-
-rm -f stdout*
-rm -f stderr*
-rm -f core.*
-rm -f bin/*
-rm -f graphs/graphviz/png/*.png
-rm -f graphs/graphviz/*.gv
-rm -f graphs/graphout*
-mpicc -Wall -g -I. risk.c -o bin/risk
-mpicc -Wall -g -I. extras/generator.c -o bin/gen
-mpicc -Wall -g -I. extras/to_graphviz.c -o bin/to_graphviz
 #METRIC RANKS TERRITORIES SECONDS
 GLOBAL 16 1024 0.185725
 PHASE1 16 1024 0.100637
@@ -264,55 +217,6 @@ GLOBAL 16 8192 3.407324
 PHASE1 16 8192 1.882246
 PHASE2 16 8192 1.470032
 #TOTAL RUNTIME: 34.258780 seconds
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-^CCtrl-C caught... cleaning up processes
-PPCzimmtn@kratos:~/risk-esque-simulator> ^C
-PPCzimmtn@kratos:~/risk-esque-simulator> git commit -a -m "FIXED MEMORY LEAK WATCH ME PLAY KEYBOARD jkasdlkjas;lkjas;lkas;kfda"
-[master 53499d9] FIXED MEMORY LEAK WATCH ME PLAY KEYBOARD jkasdlkjas;lkjas;lkas;kfda
- 3 files changed, 13 insertions(+), 3 deletions(-)
-PPCzimmtn@kratos:~/risk-esque-simulator> git push
-To git@bitbucket.org:szabodabo/risk-esque-simulator.git
- ! [rejected]        master -> master (non-fast-forward)
-error: failed to push some refs to 'git@bitbucket.org:szabodabo/risk-esque-simulator.git'
-To prevent you from losing history, non-fast-forward updates were rejected
-Merge the remote changes (e.g. 'git pull') before pushing again.  See the
-'Note about fast-forwards' section of 'git push --help' for details.
-PPCzimmtn@kratos:~/risk-esque-simulator> git pull
-remote: Counting objects: 11, done.
-remote: Compressing objects: 100% (9/9), done.
-remote: Total 9 (delta 4), reused 0 (delta 0)
-Unpacking objects: 100% (9/9), done.
-From bitbucket.org:szabodabo/risk-esque-simulator
-   81bc684..57cdebe  master     -> origin/master
-Merge made by recursive.
- makePlots.gp    |   20 ++++++++++++++++++++
- parseResults.sh |    6 ++++++
- 2 files changed, 26 insertions(+), 0 deletions(-)
- create mode 100644 makePlots.gp
- create mode 100644 parseResults.sh
-PPCzimmtn@kratos:~/risk-esque-simulator> git push
-Counting objects: 14, done.
-Delta compression using up to 24 threads.
-Compressing objects: 100% (8/8), done.
-Writing objects: 100% (8/8), 922 bytes, done.
-Total 8 (delta 6), reused 0 (delta 0)
-remote: bb/acl: zimmit is allowed. accepted payload.
-To git@bitbucket.org:szabodabo/risk-esque-simulator.git
-   57cdebe..8da6d96  master -> master
-PPCzimmtn@kratos:~/risk-esque-simulator> ./run.sh
-
-rm -f stdout*
-rm -f stderr*
-rm -f core.*
-rm -f bin/*
-rm -f graphs/graphviz/png/*.png
-rm -f graphs/graphviz/*.gv
-rm -f graphs/graphout*
-mpicc -Wall -g -I. risk.c -o bin/risk
-mpicc -Wall -g -I. extras/generator.c -o bin/gen
-mpicc -Wall -g -I. extras/to_graphviz.c -o bin/to_graphviz
 #METRIC RANKS TERRITORIES SECONDS
 GLOBAL 16 1024 0.213383
 PHASE1 16 1024 0.106813
@@ -383,19 +287,6 @@ GLOBAL 16 8192 5.963399
 PHASE1 16 8192 2.966695
 PHASE2 16 8192 2.877418
 #TOTAL RUNTIME: 59.866993 seconds
-PPCzimmtn@kratos:~/risk-esque-simulator> vim run.sh
-PPCzimmtn@kratos:~/risk-esque-simulator> ./run.sh
-
-rm -f stdout*
-rm -f stderr*
-rm -f core.*
-rm -f bin/*
-rm -f graphs/graphviz/png/*.png
-rm -f graphs/graphviz/*.gv
-rm -f graphs/graphout*
-mpicc -Wall -g -I. risk.c -o bin/risk
-mpicc -Wall -g -I. extras/generator.c -o bin/gen
-mpicc -Wall -g -I. extras/to_graphviz.c -o bin/to_graphviz
 #METRIC RANKS TERRITORIES SECONDS
 GLOBAL 16 1024 0.161476
 PHASE1 16 1024 0.083414
