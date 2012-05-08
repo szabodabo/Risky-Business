@@ -2,7 +2,7 @@ BG_COMPILE = mpixlc -I.
 KR_COMPILE = mpicc -Wall -g -I.
 
 bluegene: clean
-	$(BG_COMPILE) risk.c -o risk
+	$(BG_COMPILE) risk.c -o bin/risk
 	$(BG_COMPILE) extras/generator.c -o bin/gen
 	$(BG_COMPILE) extras/to_graphviz.c -o bin/to_graphviz
 kratos: 
