@@ -1,0 +1,44 @@
+====================================================================
+=           Dakota Szabo [szabod] and Noah Zimmt [zimmtn]          =
+=           Parallel Programming/Computing: Final Project          =
+=                            May 8, 2012                           =
+=                                                                  =
+=                          RISK  Simulator                         =
+====================================================================
+
+=================================
+Submitted Files:
+=================================
+ - bin/: Compiled Binaries
+ - extras/
+    - generator.c: Generates input graphs for simulator
+    - random.c: Random generator testing program for simulator
+    - removed.c: Old code removed from simulator during development
+    - to_graphviz.c: Converts output binary graphs to GraphViz format
+    - scripts/: Contains helpful parsing/running/other scripts
+- graphs/: Contains input/output graph files
+- input/: Contains input graph binary files: graphbin<N> is an N-node complete graph
+- lib/
+    - risk_battles.h: Contains battle resolution functions for simulator
+    - risk_chance.h: Contains random & diceroll functions for simulator
+    - risk_input.h: Input file parser for simulator
+    - risk_macros.h: Contains constants and inline functions for simulator
+    - risk_output.h: Output file generator for simulator
+    - risk_performance.h: Contains RDTSC cycle counter used for performance statistics
+- results/: Contains graphs/raw results used for performance analysis
+- Makefile: Build script
+- risk.c: Main source file for simulator
+- writeup.pdf: Final writeup for project
+
+=================================
+Build Instructions:
+=================================
+ - Run "make kratos" to build the project.
+ - Run 
+
+=================================
+Run Instructions:
+=================================
+ - Run "mpirun -np <N> bin/risk" to run the simulator.
+ - Binary output can be found in the graphs/ directory
+     - Converter to text/graphviz is run by calling "bin/"
