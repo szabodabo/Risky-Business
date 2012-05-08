@@ -10,7 +10,7 @@
 
 \title{
 	\textbf{
-		Creating a Turn-Based Conflict Resolution Simulator
+		Creating a Turn-Based Conflict Resolution Simulator FIX TEAMS INVADING A NODE
 	}
 }
 \author{Noah Zimmt and Dakota Szabo}
@@ -54,10 +54,29 @@
 		\section*{Related Work}
 		Proin scelerisque urna et velit rutrum non feugiat nibh luctus. Aliquam posuere viverra lectus ut varius. Nam at erat tellus. Donec sed consectetur felis. Praesent at justo sit amet est vehicula pharetra viverra et magna. Nulla dignissim consectetur facilisis. Vestibulum a dui ligula. Nullam ornare sollicitudin molestie. Integer fringilla lacus ut metus lobortis mollis. Fusce magna velit, pulvinar a molestie vel, cursus et lorem. Phasellus semper pellentesque turpis eget faucibus. Proin at neque eu neque elementum sollicitudin vitae sit amet nunc. Etiam nec erat ut enim sagittis facilisis. Curabitur sollicitudin convallis arcu sit amet dignissim. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
 
-		\section*{Implementation BALLS}
-		Our parallelized simulation models each game round in two main phases. 
-		First, the edge-conflict resolution phase determines and computes the outcomes of all 'battles' that occurred during the round, with each battle taking place on an edge (a border between territories). 
-		Next, the vertex-conflict resolution phase uses the data from the edge-conflict phase to decide which territories were conquered by which teams. 
+		\section*{Implementation}
+		To process events in parallel, each compute node must have a subset of the data used to represent the entire simulation.  
+		Because the total amount of data being stored for the entire simulation grows exponentially with the size of the input graph, we partition the graph into sets of vertices, with each compute node being responsible for a given slice of the graph.  
+		A compute node stores the team, total troop count, battle decisions, and battle resolutions for each of its vertices.
+		Because each battle is fought over an edge, and an edge may connect two vertices whose data is contained on two different compute nodes, we elect a single compute node to be responsible for the battle that takes place on any given edge of the graph.
+		Being that edge-coloring is known to be an NP-Complete problem, we devised an approximate solution for assigning battle computation to each compute node such that the work was resonable evenly distributed across all compute nodes: each territory flips a coin at the start of its turn; upon entering a battle, the coin flips are compared.  
+		If the coin flips are the same, the compute node whose territory has a lower ID number is responsible for the calculation; otherwise, the other compute node is responsible.
+
+		Our parallelized simulation models each game round in two main stages: an edge conflict stage and an internal vertex conflict stage.
+		First, the edge conflict resolution stage determines and computes the outcomes of all battles that occurred during the round, with each battle taking place on an edge (a border between territories). 
+		Because of the graph partitioning scheme, it was necessary to communicate a territory's battle stances to each of its bordering territories.  
+		We did this using a round-robin inter-node communication method that enabled us to pass slices of a larger matrix of battle information to each node in turn; each compute node would scan the slice of battle data that it received, taking note of any important information about bordering territories engaging in battles with any of its territories.  
+		Once all information was passed around, each compute node had enough information to compute the results for its share of battles for the turn (our coin-flip algorithm ensures that no computation is performed redundantly).  
+		At this point in the turn, all battle information is decided. 
+		To communicate this information back to the territories that it affects, we again utilize a round-robin data passing scheme that we refer to as the \emph{report card scheme}: each compute node creates and fills in a report card about all territories for which it is responsible.
+		Each compute node then passes its report card to its right-hand neighbor (for the sake of simplicity, we visualize the compute nodes in a circular arrangement).  
+		The neighbor then fills in information that it had computed about the first compute node's territories and passes the report card to its right. 
+		This process continues until the report card arrives back at its owner, ensuring that at the end of the round-robin, each compute node's report card will have been filled in by each of the other compute nodes.
+		
+		Next, the internal vertex conflict resolution stage uses the data from the edge-conflict phase to decide which territories were conquered by which teams. 
+		After all battles and takeovers are resolved, each compute node computes the total remaining number of troops in each territory and then decides which team now owns each territory that it is responsible for.
+		At this point, each compute node has a new set of data about each of its territories; critical data such as team membership, total troop counts, and new coin flips for battle computation are distributed from each compute node to each other compute node via AllReduce.
+
 		
 		\section*{Rules and Regulations}
 		
