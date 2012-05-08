@@ -39,7 +39,6 @@ int main( int argc, char **argv ) {
 
 	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
 		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
-		printf("Caught max iterations of %d\n", max_iterations);
 	}
 
 	srand( myRank ); //BIG COMMENT -- NEED TO ADD BACK time(NULL) after testing
@@ -431,12 +430,17 @@ int main( int argc, char **argv ) {
 
 		phase2_end = rdtsc();
 
-		phase1_total += TO_SECS(phase1_end - phase1_start);
-		phase2_total += TO_SECS(phase2_end - phase2_start);
+		phase1_total += (phase1_end - phase1_start) / CURRENT_CLOCK;
+		phase2_total += (phase2_end - phase2_start) / CURRENT_CLOCK;
 	}
 
+
 	global_end = rdtsc();
-	double global_total = TO_SECS(global_end - global_start);
+	double global_total = (global_end - global_start) / CURRENT_CLOCK;
+
+	global_total /= num_iterations;
+	phase1_total /= num_iterations;
+	phase2_total /= num_iterations;
 
 	double global_avg;
 	MPI_Allreduce(&global_total, &global_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
