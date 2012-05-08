@@ -110,7 +110,7 @@
 		\begin{center}
 			\includegraphics[width=.45\textwidth]{graphs.eps}
 			%\vspace*{-10pt}
-			\small{Figure 1: Herpaderp}
+			\small{Figure 1: Performance of the algorithm on varying input sizes}
 		\end{center}
 
 		Utilizing 16 compute nodes, we ran the simulation on complete graphs with size $2^{n}$, with $n$ ranging from 4 to 13 (16 to 8192 vertices). 
@@ -122,15 +122,15 @@
 		We also note that the phase 1 curve is noticeably more irregular than the phase 2 curve, although its irregularity seems to smooth as the graph size increases. 
 		This is due to the fact that we distribute computations on a per-territory basis, with a 50 percent chance that either territory involved in a conflict has its owner compute node handle the conflict. 
 		The implication here is that slight load imbalances are likely responsible for the noise with small graph sizes, with the noise being reduced as graph size increases because the irregularities are amortized over a much larger sample space.
-		\\
-		The second scaling study we ran was a strong scaling study, with a various quantities of compute nodes working on a graph of 10080 vertices (we chose this number due to the fact that its evenly divisible by a large quantity of integers less than 16)
-		\\
+		The second scaling study we ran was a strong scaling study, with a various quantities of compute nodes working on a graph of 10080 vertices (we chose this number due to the fact that its evenly divisible by a large quantity of integers less than 16). 
 		\begin{center}
 			\includegraphics[width=.45\textwidth]{ranks.eps}
 			%\vspace*{-10pt}
-			\small{Figure 2: Herpaderpa}
+			\small{Figure 2: Strong scaling study (10080 vertex complete graph)}
 		\end{center}
 		
+		We immediately notice that there seems to be a point of diminishing returns for a graph of this size. 
+		Using greater than 6 compute nodes on an input of 8192 vertices seems to have a non-appreciable effect on the execution time of the algorithm. The reason for this immediate drop-off after a previously nearly direct correlation between more processors and speedup (from 2 to 6 compute nodes) is unclear, but it would appear that the sheer amount of data being passed around during the round robin phases is enough to counterbalance the speedup from doing less computational work per node. It is also possible that the (ever varying) load on the kratos server is responsible for slight inaccuracies with the data, but the other tests we ran seemed to verify these results.
 				
 		\section*{Conclusion}
 		Nullam tortor mi, volutpat quis auctor non, aliquam id tellus. Morbi a massa libero, id tempus mi. Aliquam et sapien non est mollis interdum. Cras felis diam, luctus eget pellentesque ut, lacinia nec dui. Aenean eu orci neque, eu volutpat enim. Sed eleifend fringilla turpis, sed pharetra libero mollis non. Quisque ultrices, purus ut sagittis euismod, orci risus venenatis lacus, a auctor diam augue vitae dolor. Duis eleifend pulvinar enim ac mollis. Nulla auctor metus vel turpis consequat aliquam.
