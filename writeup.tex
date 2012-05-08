@@ -10,7 +10,7 @@
 
 \title{
 	\textbf{
-		Creating a Turn-Based Conflict Resolution Simulator FIX TEAMS INVADING A NODE
+		Creating a Turn-Based Conflict Resolution Simulator
 	}
 }
 \author{Noah Zimmt and Dakota Szabo}
@@ -121,16 +121,20 @@
 		
 
 		\section*{Related Work}
-		Graph partitioning is a well-studied problem.  Our simulator used a trivial graph partitioning algorithm to divide up nodes among compute nodes.  Karypis and Kumar (IEEE HPC 1998) describe a parallel graph paritioning algorithm that promises high-performance partitioning with constraints on the partitioning schemes used.  In addition to graph partitioning, the distribution of computation among compute cores can be reduced to a variant of the NP-Complete edge-coloring problem as described by Holyer (Society for Industrial and Applied Mathematics, 1981); approximation algorithms exist to achieve a near-optimal solution (as described by Sanders and Steurer, ACM TALG, 2008).
+		Graph partitioning is a well-studied problem.  
+		Our simulator used a trivial graph partitioning algorithm to divide up nodes among compute nodes.  
+		Karypis and Kumar (IEEE HPC 1998) describe a parallel graph paritioning algorithm that promises high-performance partitioning with constraints on the partitioning schemes used.  
+		In addition to graph partitioning, the distribution of computation among compute cores can be reduced to a variant of the NP-Complete edge-coloring problem as described by Holyer (Society for Industrial and Applied Mathematics, 1981); approximation algorithms exist to achieve a near-optimal solution (as described by Sanders and Steurer, ACM TALG, 2008).
 
 		\section*{Future Work}
-		 - Further modularization of team strategy?
-		 - Scaling studies on BlueGene/L \& BlueGene/Q
-		 - Optimization of graph partitioning and/or calculation distribution
-		 - Graph visualization for higher territory counts.
-		 - Experiments with different graph shapes/type and effects on performance
 
-
+		Our successful results on Kratos lead us naturally to potentially explore further scaling studies at the massively parallel level; testing performance on the BlueGene/L system (and eventually the BlueGene/Q) would greatly enhance our insight into how our simulation performed as a result of performance and communication constraints.  
+		Further performance optimizations would take into account more advanced approximation algorithms both for graph partitioning (to keep as many conflict resolutions local to a compute node as possible) and for even distribution of battle resolution calculation.  
+		As previously mentioned, a next logical step from reducing communication requirements is to eliminate the need to exchange all simulation data at the end of each turn of the simulation.  
+		Our results from running test cases on different types of input graphs, while preliminary, showed interesting trends that we would have liked to have explored more fully.  
+		Future work in this area would include scaling studies in which the type of graph (or degree of connectedness) was studied for its effect on simulator performance.
+		While our simulation was able to generate graphical representations in PNG format of intermediate battle situations (using the \emph{GraphViz} program), developing a method to visualize larger-scale conflict graphs in the thousands of nodes would be incredibly useful as the scale of the input grows.  
+		With growing input scale, we also look to improving the overall ease of use of our simulator; while many of its features are already fairly modular, using a system such as a subclassed C++ implementation that enabled users to supply a strategy class would encourage interaction with the simulator and would facilitate better results. 
 
 	\end{multicols}
 \end{document}
