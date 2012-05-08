@@ -25,16 +25,20 @@
 	\begin{multicols}{2}
 		\section*{Introduction}
 		
+		Our simulation models the popular domination game \emph{Risk}. The map is laid out as a graph (a set of vertices and edges) in which each territory corresponds to a node in the graph and each border between territories corresponds to an edge between two nodes. While the graphs we used to model simulations were complete graphs, the simulator is capable of simulating conflicts given any user-provided graph and set of initial troop count.  
+
+		Each territory must manage its army (a collection of troops), placing troops on edges to attack other territories or defend itself against other territories. Each territory belongs to a team; a territory will adopt its team's strategy for placing troops on edges, allowing the simulator to show how successful a strategy will be given graph shape and initial troop counts.
+
+		The simulator is turn-based, with three stages comprising each turn: the decision stage, the resolution stage, and the synchronization stage. During the decision stage, each territory chooses to place troops on borders; a territory must choose how many of its troops are to be placed on each of its borders and what action (attack or defend) the collection of troops will perform on that border. During the resolution stage, each territory communicates its troop placements to each other territory, setting up the battle scenarios between bordering territories.  \textbf{Battles are resolved similarly to how \emph{Risk} battles are resolved: each attacking troop and each defending troop roll a die; the troop with the higher roll conquers the troop with the lower roll, with ties being awarded to the defender.} The synchronization stage handles territory takeovers (in which one territory's troops on a border conquer all of the other's troops, leading the conquered territory to potentially become a part of the conquering territory's team), troop reinforcements, and the communication of all updated team information and total troop counts from all territories to all other territories.
+
+		The game terminates if, at the end of a turn, one of three conditions are met: either every territory is controlled by one team, there exists a single territory or no territory that has a nonzero number of troops remaining, or a user-supplied maximum number of turns has been reached.
+
 
 		\section*{Related Work}
 		Proin scelerisque urna et velit rutrum non feugiat nibh luctus. Aliquam posuere viverra lectus ut varius. Nam at erat tellus. Donec sed consectetur felis. Praesent at justo sit amet est vehicula pharetra viverra et magna. Nulla dignissim consectetur facilisis. Vestibulum a dui ligula. Nullam ornare sollicitudin molestie. Integer fringilla lacus ut metus lobortis mollis. Fusce magna velit, pulvinar a molestie vel, cursus et lorem. Phasellus semper pellentesque turpis eget faucibus. Proin at neque eu neque elementum sollicitudin vitae sit amet nunc. Etiam nec erat ut enim sagittis facilisis. Curabitur sollicitudin convallis arcu sit amet dignissim. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
 		
 		\section*{Rules and Regulations}
-		Our simulation models the popular domination game \emph{Risk}. The map is laid out as a graph (a set of vertices and edges) in which each territory corresponds to a node in the graph and each border between territories corresponds to an edge between two nodes. While the graphs we used to model simulations were complete graphs, the simulator is capable of simulating conflicts given any user-provided graph and set of initial troop count.  
-
-		Each territory must manage its army (a collection of troops), placing troops on edges to attack other territories or defend itself against other territories. Each territory belongs to a team; a territory will adopt its team's strategy for placing troops on edges, allowing the simulator to show how successful a strategy will be given graph shape and initial troop counts.
-
-		The simulator is turn-based, with two phases comprising each turn: the decision stage and the resolution stage. During the decision stage, each territory chooses to place troops on borders; a territory must choose how many of its troops are to be placed on each of its borders and what action (attack or defend) the collection of troops will perform on that border. 
+		
 
 		
 		
