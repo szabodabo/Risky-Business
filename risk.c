@@ -31,6 +31,12 @@ int main( int argc, char **argv ) {
 	int num_iterations = 0;
 	int max_iterations = INT_MAX;
 
+	//Timing metrics:
+	double global_start = 0, global_end = 0;
+	double phase1_start = 0, phase1_end = 0;
+	double phase2_start = 0, phase2_end = 0;
+	double phase1_total = 0, phase2_total = 0; // Number of seconds elapsed
+
 	if ( argc == 2 && strncmp(argv[1], "--max-iterations=", strlen("--max-iterations=")) == 0 ) {
 		sscanf(argv[1], "--max-iterations=%d", &max_iterations);
 		printf("Caught max iterations of %d\n", max_iterations);
@@ -96,6 +102,8 @@ int main( int argc, char **argv ) {
 	tt_offset = read_from_file( tt_total, adjMatrix, troopCounts_temp, teamIDs_temp, myRank, commSize );
 	do_my_coin_flips(myRank, tt_per_rank, tt_offset, coinFlips_temp);
 
+	global_start = rdtsc();
+
 	//Use all-reduce to ensure all processes are aware of initial team IDs and troop counts
 	MPI_Allreduce( troopCounts_temp, troopCounts, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
 	MPI_Allreduce( teamIDs_temp, teamIDs, tt_total, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
@@ -105,13 +113,9 @@ int main( int argc, char **argv ) {
 
 	int loopCondition = 1;
 
-	//PERFORMANCE VARIABLES
-	double iteration_cycles = 0;
-	double work_cycles_1 = 0;
-	double work_cycles_2 = 0;
-	//END PERFORMANCE VARIABLES
-
 	while ( loopCondition == 1 ) {
+
+		phase1_start = rdtsc();
 
 		num_iterations++;
 
@@ -210,7 +214,11 @@ int main( int argc, char **argv ) {
 			buffer_switch = !buffer_switch;
 		}
 
+		phase1_end = rdtsc();
+
 		MPI_Barrier( MPI_COMM_WORLD );
+
+		phase2_start = rdtsc();
 
 		//Now that all of the edge results have been computed, we need to pass around potential occupation data.
 		statuses[SEND].MPI_SOURCE = myRank;
@@ -420,7 +428,15 @@ int main( int argc, char **argv ) {
 				printf("GAME OVER: Maximum number of iterations reached (MAX: %d)\n", max_iterations);
 			}
 		}
+
+		phase2_end = rdtsc();
+
+		phase1_total += TO_SECS(phase1_end - phase1_start);
+		phase2_total += TO_SECS(phase2_end - phase2_start);
 	}
+
+	global_end = rdtsc();
+	double total_secs = TO_SECS(global_end - global_start);
 
 	MPI_Finalize();
 	return EXIT_SUCCESS;

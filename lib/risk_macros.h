@@ -20,4 +20,9 @@
 #define INPUT_BINARY "input/graphbin"
 #define HEADER_BYTES 4
 
+#define KRATOS_CLOCK 2666700000.0
+#define BLUEGENE_CLOCK 700000000.0
+#define CURRENT_CLOCK KRATOS_CLOCK
+#define TO_SECS(CYC) (double)CYC / (double)CURRENT_CLOCK
+
 #endif
