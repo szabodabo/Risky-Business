@@ -14,6 +14,6 @@ for FILE in $GRAPHS; do
 	mpirun -np 16 bin/risk --max-iterations=10
 done
 
-for RANK in 2 4 8 16; do
+for RANK in 8 16 8 16 8 16 8 16 8 16; do
 	mpirun -np $RANK bin/risk --max-iterations=10
 done
